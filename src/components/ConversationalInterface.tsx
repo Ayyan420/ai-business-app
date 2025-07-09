@@ -63,10 +63,111 @@ const ConversationalInterface: React.FC<ConversationalInterfaceProps> = ({ onClo
     setInputMessage('');
     
     try {
-      const aiResponse = await deepseekAI.generateContent(
-        `You are an AI Business Assistant. The user asked: "${inputMessage}". Provide helpful, actionable business advice.`,
-        'general'
-      );
+      let aiResponse = '';
+      
+      // Smart response generation based on user input
+      const input = inputMessage.toLowerCase();
+      
+      if (input.includes('marketing') || input.includes('ad') || input.includes('campaign')) {
+        aiResponse = `Great question about marketing! Here's what I recommend:
+
+🎯 **For effective marketing campaigns:**
+• Focus on your target audience's pain points
+• Use compelling headlines that grab attention
+• Include clear calls-to-action
+• Test different versions to see what works
+
+📊 **Key metrics to track:**
+• Click-through rates
+• Conversion rates  
+• Cost per acquisition
+• Return on ad spend
+
+Would you like me to help you create specific marketing content? I can generate ad copy, email campaigns, or social media posts!`;
+      } else if (input.includes('invoice') || input.includes('billing') || input.includes('payment')) {
+        aiResponse = `I'll help you with invoicing! Here's what you need to know:
+
+📄 **Professional invoice essentials:**
+• Clear invoice number and date
+• Your business information and logo
+• Client details and project description
+• Itemized services with quantities and rates
+• Payment terms and due date
+
+💡 **Pro tips:**
+• Send invoices immediately after work completion
+• Offer multiple payment methods
+• Follow up on overdue payments professionally
+• Keep detailed records for tax purposes
+
+I can help you create a professional invoice right now using our invoice generator tool!`;
+      } else if (input.includes('strategy') || input.includes('plan') || input.includes('growth')) {
+        aiResponse = `Excellent! Let's work on your business strategy:
+
+🎯 **Strategic planning framework:**
+1. **Assess current position** - Where are you now?
+2. **Define clear goals** - Where do you want to be?
+3. **Identify opportunities** - What markets can you tap?
+4. **Analyze competition** - What are others doing?
+5. **Create action plan** - How will you get there?
+
+📈 **Growth strategies to consider:**
+• Market penetration (sell more to existing customers)
+• Market development (find new customer segments)
+• Product development (create new offerings)
+• Strategic partnerships (collaborate with others)
+
+What specific area of your business strategy would you like to focus on?`;
+      } else if (input.includes('task') || input.includes('productivity') || input.includes('workflow')) {
+        aiResponse = `Let's optimize your productivity! Here's my advice:
+
+⚡ **Productivity boosters:**
+• Use the 80/20 rule - focus on high-impact tasks
+• Batch similar activities together
+• Set specific time blocks for different work types
+• Eliminate or delegate low-value tasks
+
+🔄 **Workflow optimization:**
+• Map out your current processes
+• Identify bottlenecks and delays
+• Automate repetitive tasks
+• Use project management tools
+
+📋 **Task management tips:**
+• Prioritize by urgency and importance
+• Break large projects into smaller steps
+• Set realistic deadlines
+• Review and adjust regularly
+
+Would you like me to help you create a task management system?`;
+      } else if (input.includes('ai') || input.includes('automation')) {
+        aiResponse = `AI and automation can transform your business! Here's how:
+
+🤖 **AI applications for business:**
+• Content generation (marketing copy, emails, social posts)
+• Customer service chatbots
+• Data analysis and insights
+• Automated scheduling and reminders
+
+⚙️ **Automation opportunities:**
+• Email marketing sequences
+• Invoice generation and sending
+• Social media posting
+• Lead qualification and follow-up
+
+💰 **ROI benefits:**
+• Save 10-20 hours per week
+• Reduce human errors
+• Improve customer response times
+• Scale operations without hiring
+
+This platform already includes many AI tools - have you tried our content generator or invoice automation?`;
+      } else {
+        aiResponse = await deepseekAI.generateContent(
+          `You are an AI Business Assistant. The user asked: "${inputMessage}". Provide helpful, actionable business advice.`,
+          'general'
+        );
+      }
       
       setIsTyping(false);
       

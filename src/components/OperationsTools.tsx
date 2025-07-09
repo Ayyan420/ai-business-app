@@ -96,11 +96,13 @@ const OperationsTools: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-slate-800">Task Overview</h3>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+        <button 
           onClick={() => {
             setEditingTask(null);
             setShowTaskModal(true);
           }}
+          className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           <span>Add Task</span>
         </button>

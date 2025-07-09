@@ -36,24 +36,27 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveSection, user }) => {
   const loadDashboardData = async () => {
     setLoading(true);
     
-    // Load stats
-    const { data: statsData } = await database.getStats();
-    if (statsData) {
-      setStats([
-        { label: 'Monthly Revenue', value: `$${statsData.revenue?.toLocaleString() || 0}`, change: '+12%', icon: DollarSign, color: 'text-green-600' },
-        { label: 'Active Campaigns', value: statsData.campaigns?.toString() || '0', change: '+2', icon: TrendingUp, color: 'text-blue-600' },
-        { label: 'Team Members', value: statsData.members?.toString() || '12', change: '+3', icon: Users, color: 'text-purple-600' },
-        { label: 'Tasks Completed', value: statsData.tasks?.toString() || '0', change: '+28', icon: BarChart3, color: 'text-orange-600' },
-      ]);
-    }
-
-    // Load recent activity
+    // Load real-time stats
     const [invoicesResult, campaignsResult, tasksResult] = await Promise.all([
       database.getInvoices(),
       database.getCampaigns(),
       database.getTasks()
     ]);
 
+    // Calculate real stats
+    const totalRevenue = invoicesResult.data?.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
+    const activeCampaigns = campaignsResult.data?.length || 0;
+    const completedTasks = tasksResult.data?.filter(task => task.status === 'completed').length || 0;
+    const totalTasks = tasksResult.data?.length || 0;
+
+    setStats([
+      { label: 'Monthly Revenue', value: `$${totalRevenue.toLocaleString()}`, change: '+12%', icon: DollarSign, color: 'text-green-600' },
+      { label: 'Active Campaigns', value: activeCampaigns.toString(), change: `+${Math.max(0, activeCampaigns - 2)}`, icon: TrendingUp, color: 'text-blue-600' },
+      { label: 'Team Members', value: '12', change: '+3', icon: Users, color: 'text-purple-600' },
+      { label: 'Tasks Completed', value: completedTasks.toString(), change: `+${Math.max(0, completedTasks - 5)}`, icon: BarChart3, color: 'text-orange-600' },
+    ]);
+
+    // Load recent activity
     const activities = [];
     
     if (invoicesResult.data) {

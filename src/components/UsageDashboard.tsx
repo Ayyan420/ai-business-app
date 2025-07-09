@@ -78,6 +78,22 @@ const UsageDashboard: React.FC = () => {
             Get unlimited access to all features with our affordable Pro plan starting at just $9.99/month.
           </p>
           <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+            onClick={() => {
+              const modal = document.createElement('div');
+              modal.innerHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div class="bg-white p-6 rounded-lg max-w-md">
+                    <h3 class="text-lg font-bold mb-4">Upgrade to Pro</h3>
+                    <p class="mb-4">Get unlimited access for just $9.99/month</p>
+                    <div class="flex space-x-2">
+                      <button onclick="this.closest('.fixed').remove(); localStorage.setItem('userTier', 'pro'); alert('Upgraded to Pro! (Demo mode)'); window.location.reload();" class="px-4 py-2 bg-blue-600 text-white rounded">Upgrade</button>
+                      <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              `;
+              document.body.appendChild(modal);
+            }}
             Upgrade Now
           </button>
         </div>

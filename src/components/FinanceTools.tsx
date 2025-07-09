@@ -220,8 +220,10 @@ const FinanceTools: React.FC = () => {
       <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-slate-800">All Invoices</h2>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+          <button 
             onClick={() => exportAllInvoices()}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
             <Download className="w-4 h-4" />
             <span>Export All</span>
           </button>
@@ -268,13 +270,26 @@ const FinanceTools: React.FC = () => {
                     <td className="py-3 px-4 text-slate-600">{invoice.due_date}</td>
                     <td className="py-3 px-4">
                       <div className="flex space-x-2">
-                        <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                        <button 
+                          onClick={() => alert('Invoice view feature coming soon!')}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                        >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button className="p-1 text-slate-600 hover:bg-slate-50 rounded">
+                        <button 
+                          onClick={() => alert('Invoice edit feature coming soon!')}
+                          className="p-1 text-slate-600 hover:bg-slate-50 rounded"
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="p-1 text-red-600 hover:bg-red-50 rounded">
+                        <button 
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this invoice?')) {
+                              setSavedInvoices(prev => prev.filter(inv => inv.id !== invoice.id));
+                            }
+                          }}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>

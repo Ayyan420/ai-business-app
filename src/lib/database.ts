@@ -18,10 +18,10 @@ let demoData = {
     { id: '4', title: 'Optimize website performance', priority: 'low', assignee: 'David Kim', due_date: '2024-02-02', status: 'completed' },
   ],
   stats: {
-    revenue: 24500,
-    campaigns: 8,
+    revenue: 0, // Will be calculated from actual invoices
+    campaigns: 0, // Will be calculated from actual campaigns  
     members: 12,
-    tasks: 156
+    tasks: 0 // Will be calculated from actual tasks
   }
 }
 
@@ -105,12 +105,16 @@ export const database = {
   // Stats
   async getStats() {
     if (isDemoMode) {
+      // Calculate real stats from actual data
+      const totalRevenue = demoData.invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0);
+      const completedTasks = demoData.tasks.filter(task => task.status === 'completed').length;
+      
       return { 
         data: {
-          ...demoData.stats,
-          revenue: demoData.invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0),
+          revenue: totalRevenue,
           campaigns: demoData.campaigns.length,
-          tasks: demoData.tasks.filter(task => task.status === 'completed').length
+          members: 12,
+          tasks: completedTasks
         }, 
         error: null 
       }

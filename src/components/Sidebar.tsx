@@ -139,6 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
         
         <button className="w-full flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors mt-2">
+          onClick={() => alert('Settings feature coming soon!')}
           <Settings className="w-5 h-5" />
           <span className="font-medium">Settings</span>
         </button>
