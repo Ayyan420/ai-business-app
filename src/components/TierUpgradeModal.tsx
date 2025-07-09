@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Check, Crown, Zap } from 'lucide-react';
 import { TIERS, UserTier } from '../lib/tiers';
+import PaymentModal from './PaymentModal';
 
 interface TierUpgradeModalProps {
   isOpen: boolean;
@@ -9,15 +10,16 @@ interface TierUpgradeModalProps {
 }
 
 const TierUpgradeModal: React.FC<TierUpgradeModalProps> = ({ isOpen, onClose, currentFeature }) => {
+  const [showPayment, setShowPayment] = useState(false);
+  const [selectedTierForPayment, setSelectedTierForPayment] = useState('');
+  
   if (!isOpen) return null;
 
   const handleUpgrade = (tierName: string) => {
-    // In a real app, this would integrate with a payment processor
-    // For now, we'll simulate the upgrade
-    localStorage.setItem('userTier', tierName);
-    alert(`Upgraded to ${TIERS[tierName].name} plan! (Demo mode - no actual payment processed)`);
-    onClose();
-    window.location.reload();
+    if (tierName === 'free') return;
+    
+    setSelectedTierForPayment(tierName);
+    setShowPayment(true);
   };
 
   return (
@@ -126,6 +128,13 @@ const TierUpgradeModal: React.FC<TierUpgradeModalProps> = ({ isOpen, onClose, cu
           </div>
         </div>
       </div>
+      
+      <PaymentModal
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
+        selectedTier={selectedTierForPayment}
+        user={{ id: 'demo-user', name: 'Demo User', email: 'demo@example.com' }}
+      />
     </div>
   );
 };

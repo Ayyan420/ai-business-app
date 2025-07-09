@@ -8,6 +8,7 @@ import FinanceTools from './components/FinanceTools';
 import StrategyTools from './components/StrategyTools';
 import OperationsTools from './components/OperationsTools';
 import ConversationalInterface from './components/ConversationalInterface';
+import SettingsModal from './components/SettingsModal';
 
 interface User {
   id: string;
@@ -22,6 +23,7 @@ function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showChat, setShowChat] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     // Check for existing user session
@@ -30,6 +32,14 @@ function App() {
       setUser(JSON.parse(savedUser));
       setCurrentPage('dashboard');
     }
+    
+    // Listen for settings modal
+    const handleOpenSettings = () => setShowSettings(true);
+    window.addEventListener('openSettings', handleOpenSettings);
+    
+    return () => {
+      window.removeEventListener('openSettings', handleOpenSettings);
+    };
   }, []);
 
   const handleLogin = (userData: User) => {
@@ -110,6 +120,14 @@ function App() {
       {showChat && (
         <ConversationalInterface 
           onClose={() => setShowChat(false)}
+          user={user}
+        />
+      )}
+      
+      {showSettings && (
+        <SettingsModal
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
           user={user}
         />
       )}
