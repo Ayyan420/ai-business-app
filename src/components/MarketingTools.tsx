@@ -8,9 +8,13 @@ import {
   Target,
   Zap,
   Copy,
-  Download
+  Download,
+  Plus
 } from 'lucide-react';
 import { database } from '../lib/database';
+import { deepseekAI } from '../lib/deepseek';
+import { TierManager } from '../lib/tiers';
+import TierUpgradeModal from './TierUpgradeModal';
 
 const MarketingTools: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState('ad-copy');
@@ -25,6 +29,7 @@ const MarketingTools: React.FC = () => {
   });
   const [savedCampaigns, setSavedCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     loadCampaigns();
@@ -43,54 +48,50 @@ const MarketingTools: React.FC = () => {
     { id: 'landing', name: 'Landing Pages', icon: FileText, description: 'Create high-converting pages' },
   ];
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!formData.targetAudience || !formData.product) {
       alert('Please fill in target audience and product/service fields');
       return;
     }
 
+    // Check tier limits
+    if (!TierManager.canUseFeature('contentGenerations')) {
+      setShowUpgradeModal(true);
+      return;
+    }
     setIsGenerating(true);
     
-    // Simulate AI content generation with realistic delay
-    setTimeout(() => {
-      const contentTemplates = {
-        'ad-copy': [
-          `🎯 Attention ${formData.targetAudience}!\n\nTired of struggling with ${formData.product}? Our revolutionary solution has helped over 10,000 businesses like yours achieve:\n\n${formData.benefits.split(',').map(b => `✅ ${b.trim()}`).join('\n')}\n\n🚀 Join the success stories today!\n\n👉 Start your FREE trial now - no credit card required!\n\n#${formData.product.replace(/\s+/g, '')} #BusinessGrowth #Success`,
-          
-          `Transform Your Business with ${formData.product}!\n\n${formData.targetAudience}, imagine if you could:\n${formData.benefits.split(',').map(b => `• ${b.trim()}`).join('\n')}\n\nOur proven system makes it possible. Join 10,000+ satisfied customers who've already transformed their operations.\n\n🎁 Limited Time: Get 50% off your first month!\n\nClick to claim your discount before it expires!`,
-          
-          `BREAKTHROUGH: ${formData.product} That Actually Works!\n\nDear ${formData.targetAudience},\n\nStop wasting time and money on solutions that don't deliver. Our ${formData.product} is different:\n\n${formData.benefits.split(',').map(b => `→ ${b.trim()}`).join('\n')}\n\nProven results. Real testimonials. Money-back guarantee.\n\nReady to see the difference? Start your free trial today!`
-        ],
-        
-        'email': [
-          `Subject: ${formData.targetAudience} - This Changes Everything!\n\nHi [First Name],\n\nI hope this email finds you well. As someone in the ${formData.targetAudience.toLowerCase()} space, I thought you'd be interested in something that's been creating quite a buzz.\n\nOur ${formData.product} has been helping businesses like yours achieve:\n${formData.benefits.split(',').map(b => `• ${b.trim()}`).join('\n')}\n\nThe results speak for themselves:\n• 300% average ROI within 90 days\n• 10,000+ satisfied customers\n• 99.9% uptime guarantee\n\nWould you like to see how this could work for your business?\n\n[BOOK FREE DEMO]\n\nBest regards,\n[Your Name]\n\nP.S. We're offering a limited-time 50% discount for new customers. Don't miss out!`,
-          
-          `Subject: Quick Question About Your ${formData.product} Strategy\n\nHi [First Name],\n\nI've been following your work in the ${formData.targetAudience.toLowerCase()} industry, and I'm impressed by what you've accomplished.\n\nI wanted to reach out because we've developed something that might interest you. Our ${formData.product} solution has helped similar businesses:\n\n${formData.benefits.split(',').map(b => `✓ ${b.trim()}`).join('\n')}\n\nI'd love to show you a quick 10-minute demo of how this could apply to your specific situation.\n\nAre you available for a brief call this week?\n\n[SCHEDULE CALL]\n\nBest,\n[Your Name]`
-        ],
-        
-        'social': [
-          `🚀 Game-changer alert for ${formData.targetAudience}!\n\nJust discovered this incredible ${formData.product} that's helping businesses:\n${formData.benefits.split(',').map(b => `🎯 ${b.trim()}`).join('\n')}\n\nThe results are mind-blowing! 📈\n\nWho else needs to see this? Tag someone below! 👇\n\n#${formData.product.replace(/\s+/g, '')} #BusinessGrowth #GameChanger #${formData.targetAudience.replace(/\s+/g, '')}`,
-          
-          `💡 PSA for ${formData.targetAudience}:\n\nStop doing things the hard way! 🛑\n\nThis ${formData.product} just changed everything:\n${formData.benefits.split(',').map(b => `⚡ ${b.trim()}`).join('\n')}\n\nSeriously, why didn't I find this sooner? 🤦‍♂️\n\nLink in bio for free trial! 👆\n\n#ProductivityHack #BusinessTips #${formData.targetAudience.replace(/\s+/g, '')}`
-        ],
-        
-        'landing': [
-          `# The Ultimate ${formData.product} for ${formData.targetAudience}\n\n## Finally, a solution that actually works!\n\n### What You'll Get:\n${formData.benefits.split(',').map(b => `• ${b.trim()}`).join('\n')}\n\n### Why Choose Us?\n• Trusted by 10,000+ businesses\n• 99.9% uptime guarantee\n• 24/7 customer support\n• 30-day money-back guarantee\n\n### Ready to Transform Your Business?\n\n[START FREE TRIAL] [WATCH DEMO]\n\n*No credit card required • Setup in under 5 minutes*\n\n---\n\n### What Our Customers Say:\n\n"This ${formData.product} transformed our entire operation. We saw results within the first week!" - Sarah J., CEO\n\n"Best investment we've made for our business. The ROI is incredible." - Mike C., Founder`,
-          
-          `# Stop Struggling with ${formData.product}\n\n## Join 10,000+ ${formData.targetAudience} Who've Already Made the Switch\n\n### The Problem:\nYou're spending too much time on tasks that should be automated. Your current solution isn't delivering the results you need.\n\n### The Solution:\nOur ${formData.product} delivers:\n${formData.benefits.split(',').map(b => `✅ ${b.trim()}`).join('\n')}\n\n### Proof It Works:\n• 300% average ROI\n• 95% customer satisfaction\n• 50% reduction in manual work\n\n### Special Launch Offer:\n**50% OFF** your first 3 months\n\n[CLAIM YOUR DISCOUNT]\n\n*Offer expires in 48 hours*`
-        ]
-      };
+    try {
+      const prompt = `Create ${selectedTool} content for:
+Target Audience: ${formData.targetAudience}
+Product/Service: ${formData.product}
+Key Benefits: ${formData.benefits}
+Tone: ${formData.tone}
+Platform: ${formData.platform}
+
+Please create compelling, professional content that converts.`;
+
+      const content = await deepseekAI.generateContent(prompt, selectedTool);
+      setGeneratedContent(content);
       
-      const templates = contentTemplates[selectedTool as keyof typeof contentTemplates] || ['Content generated successfully!'];
-      const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
-      
-      setGeneratedContent(randomTemplate);
+      // Update usage
+      TierManager.updateUsage('contentGenerations');
+    } catch (error) {
+      console.error('Content generation error:', error);
+      alert('Error generating content. Please try again.');
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   const saveCampaign = async () => {
     if (!generatedContent) return;
+    
+    // Check tier limits
+    if (!TierManager.canUseFeature('campaigns')) {
+      setShowUpgradeModal(true);
+      return;
+    }
     
     const campaignData = {
       title: `${tools.find(t => t.id === selectedTool)?.name} - ${formData.product}`,
@@ -107,6 +108,7 @@ const MarketingTools: React.FC = () => {
     if (!error && data) {
       setSavedCampaigns(prev => [data, ...prev]);
       alert('Campaign saved successfully!');
+      TierManager.updateUsage('campaigns');
     } else {
       alert('Error saving campaign. Please try again.');
     }
@@ -316,6 +318,12 @@ const MarketingTools: React.FC = () => {
           </div>
         </div>
       )}
+      
+      <TierUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentFeature="content generation"
+      />
     </div>
   );
 };

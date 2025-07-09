@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Calendar, User, Flag } from 'lucide-react';
+import { TierManager } from '../lib/tiers';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -42,11 +43,25 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task }) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check tier limits for new tasks
+    if (!task && !TierManager.canUseFeature('tasks')) {
+      alert('You\'ve reached your task limit. Please upgrade to add more tasks.');
+      return;
+    }
+    
     if (!formData.title.trim()) {
       alert('Please enter a task title');
       return;
     }
+    
     onSave(formData);
+    
+    // Update usage only for new tasks
+    if (!task) {
+      TierManager.updateUsage('tasks');
+    }
+    
     onClose();
   };
 

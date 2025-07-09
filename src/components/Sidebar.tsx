@@ -9,8 +9,10 @@ import {
   Target, 
   TrendingUp,
   LogOut,
-  User
+  User,
+  Crown
 } from 'lucide-react';
+import { TierManager, TIERS } from '../lib/tiers';
 
 interface SidebarProps {
   activeSection: string;
@@ -18,9 +20,23 @@ interface SidebarProps {
   setShowChat: (show: boolean) => void;
   user: { id: string; name: string; email: string; avatar?: string } | null;
   onLogout: () => void;
+  sidebarOpen?: boolean;
+  setSidebarOpen?: (open: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, setShowChat, user, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  activeSection, 
+  setActiveSection, 
+  setShowChat, 
+  user, 
+  onLogout,
+  sidebarOpen = true,
+  setSidebarOpen
+}) => {
+  const currentTier = TierManager.getCurrentTier();
+  const tierInfo = TIERS[currentTier];
+  const usage = TierManager.getUsage();
+  
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'marketing', label: 'Marketing', icon: TrendingUp },
@@ -29,8 +45,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, setS
     { id: 'operations', label: 'Operations', icon: BarChart3 },
   ];
 
+  const handleMenuClick = (sectionId: string) => {
+    setActiveSection(sectionId);
+    if (setSidebarOpen) {
+      setSidebarOpen(false);
+    }
+  };
+
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg border-r border-slate-200 z-40">
+    <div className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg border-r border-slate-200 z-40 overflow-y-auto transition-transform duration-300 ${
+      sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+    }`}>
       <div className="p-6">
         <div className="flex items-center space-x-3 mb-8">
           <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -44,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, setS
         
         {/* User Profile */}
         {user && (
-          <div className="mb-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
             <div className="flex items-center space-x-3">
               {user.avatar ? (
                 <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full" />
@@ -61,13 +86,35 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, setS
           </div>
         )}
         
+        {/* Tier Information */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+          <div className="flex items-center space-x-2 mb-2">
+            <Crown className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-semibold text-blue-800">{tierInfo.name} Plan</span>
+          </div>
+          <div className="space-y-1 text-xs text-blue-700">
+            <div className="flex justify-between">
+              <span>Content:</span>
+              <span>{usage.contentGenerations || 0}/{tierInfo.limits.contentGenerations === -1 ? '∞' : tierInfo.limits.contentGenerations}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Invoices:</span>
+              <span>{usage.invoices || 0}/{tierInfo.limits.invoices === -1 ? '∞' : tierInfo.limits.invoices}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>AI Queries:</span>
+              <span>{usage.aiQueries || 0}/{tierInfo.limits.aiQueries === -1 ? '∞' : tierInfo.limits.aiQueries}</span>
+            </div>
+          </div>
+        </div>
+        
         <nav className="space-y-2">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveSection(item.id)}
+                onClick={() => handleMenuClick(item.id)}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
                   activeSection === item.id
                     ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600'
@@ -82,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, setS
         </nav>
       </div>
       
-      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-200">
+      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-200 bg-white">
         <button
           onClick={() => setShowChat(true)}
           className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -91,7 +138,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, setActiveSection, setS
           <span className="font-medium">AI Assistant</span>
         </button>
         
-        <button className="w-full flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+        <button className="w-full flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors mt-2">
           <Settings className="w-5 h-5" />
           <span className="font-medium">Settings</span>
         </button>

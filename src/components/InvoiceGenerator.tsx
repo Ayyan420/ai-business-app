@@ -11,6 +11,8 @@ import {
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useDropzone } from 'react-dropzone';
+import { TierManager } from '../lib/tiers';
+import TierUpgradeModal from './TierUpgradeModal';
 
 interface InvoiceItem {
   description: string;
@@ -58,6 +60,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
@@ -119,6 +122,12 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
   };
 
   const generatePDF = async () => {
+    // Check tier limits
+    if (!TierManager.canUseFeature('pdfExports')) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    
     if (!invoiceRef.current) return;
 
     setIsGenerating(true);
@@ -148,6 +157,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
       }
 
       pdf.save(`invoice-${invoiceData.invoiceNumber || 'draft'}.pdf`);
+      TierManager.updateUsage('pdfExports');
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
@@ -157,6 +167,12 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
   };
 
   const handleSave = () => {
+    // Check tier limits
+    if (!TierManager.canUseFeature('invoices')) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    
     if (!invoiceData.clientName || !invoiceData.clientEmail) {
       alert('Please fill in client name and email');
       return;
@@ -183,6 +199,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
     };
 
     onSave(invoiceToSave);
+    TierManager.updateUsage('invoices');
     alert('Invoice saved successfully!');
   };
 
@@ -454,6 +471,12 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
           </button>
         </div>
 
+      
+      <TierUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentFeature="invoice generation"
+      />
         <div className="space-y-3">
           {invoiceData.items.map((item, index) => (
             <div key={index} className="grid grid-cols-12 gap-3 items-end">

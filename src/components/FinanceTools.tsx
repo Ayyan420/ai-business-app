@@ -221,7 +221,7 @@ const FinanceTools: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-slate-800">All Invoices</h2>
           <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-            onClick={exportAllInvoices}
+            onClick={() => exportAllInvoices()}
             <Download className="w-4 h-4" />
             <span>Export All</span>
           </button>

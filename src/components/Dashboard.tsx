@@ -12,6 +12,7 @@ import {
   Zap
 } from 'lucide-react';
 import { database } from '../lib/database';
+import UsageDashboard from './UsageDashboard';
 
 interface DashboardProps {
   setActiveSection: (section: string) => void;
@@ -183,6 +184,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveSection, user }) => {
       </div>
 
       {/* Recent Activity */}
+      <UsageDashboard />
+      
       <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
         <h2 className="text-xl font-semibold text-slate-800 mb-6">Recent Activity</h2>
         {loading ? (
