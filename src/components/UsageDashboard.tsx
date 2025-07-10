@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TierManager, TIERS } from '../lib/tiers';
 import { Crown, Zap, BarChart3 } from 'lucide-react';
 import TierUpgradeModal from './TierUpgradeModal';
@@ -30,12 +30,12 @@ const UsageDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-slate-800">Usage Dashboard</h2>
+        <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Usage Dashboard</h2>
         <div className="flex items-center space-x-2">
           <Crown className="w-5 h-5 text-blue-600" />
-          <span className="text-sm font-medium text-blue-800">{tierInfo.name} Plan</span>
+          <span className="text-sm font-medium text-blue-800 dark:text-blue-300">{tierInfo.name} Plan</span>
         </div>
       </div>
 
@@ -47,21 +47,21 @@ const UsageDashboard: React.FC = () => {
           const percentage = getUsagePercentage(used, limit);
 
           return (
-            <div key={item.key} className="p-4 bg-slate-50 rounded-lg border">
+            <div key={item.key} className="p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border dark:border-gray-600">
               <div className="flex items-center space-x-2 mb-2">
-                <IconComponent className="w-4 h-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">{item.label}</span>
+                <IconComponent className="w-4 h-4 text-slate-600 dark:text-gray-300" />
+                <span className="text-sm font-medium text-slate-700 dark:text-gray-200">{item.label}</span>
               </div>
               
               <div className="flex items-center justify-between mb-2">
-                <span className="text-lg font-bold text-slate-800">{used}</span>
-                <span className="text-sm text-slate-600">
+                <span className="text-lg font-bold text-slate-800 dark:text-white">{used}</span>
+                <span className="text-sm text-slate-600 dark:text-gray-400">
                   / {limit === -1 ? '∞' : limit}
                 </span>
               </div>
 
               {limit !== -1 && (
-                <div className="w-full bg-slate-200 rounded-full h-2">
+                <div className="w-full bg-slate-200 dark:bg-gray-600 rounded-full h-2">
                   <div 
                     className={`h-2 rounded-full transition-all duration-300 ${getUsageColor(percentage)}`}
                     style={{ width: `${percentage}%` }}
@@ -74,13 +74,15 @@ const UsageDashboard: React.FC = () => {
       </div>
 
       {currentTier === 'free' && (
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h3 className="font-semibold text-blue-800 mb-2">Upgrade for More Features</h3>
-          <p className="text-blue-700 text-sm mb-3">
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Upgrade for More Features</h3>
+          <p className="text-blue-700 dark:text-blue-400 text-sm mb-3">
             Get unlimited access to all features with our affordable Pro plan starting at just $9.99/month.
           </p>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+          <button 
             onClick={() => setShowUpgradeModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+          >
             Upgrade Now
           </button>
         </div>

@@ -10,9 +10,15 @@ import {
   TrendingUp,
   LogOut,
   User,
-  Crown
+  Crown,
+  Globe,
+  Users,
+  UserCheck,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { TierManager, TIERS } from '../lib/tiers';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SidebarProps {
   activeSection: string;
@@ -33,6 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   sidebarOpen = true,
   setSidebarOpen
 }) => {
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const currentTier = TierManager.getCurrentTier();
   const tierInfo = TIERS[currentTier];
   const usage = TierManager.getUsage();
@@ -43,6 +50,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'finance', label: 'Finance', icon: DollarSign },
     { id: 'strategy', label: 'Strategy', icon: Target },
     { id: 'operations', label: 'Operations', icon: BarChart3 },
+    { id: 'portfolio', label: 'Portfolio', icon: Globe },
+    { id: 'crm', label: 'CRM & Leads', icon: Users },
+    { id: 'team', label: 'Team', icon: UserCheck },
   ];
 
   const handleMenuClick = (sectionId: string) => {
@@ -52,8 +62,16 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
+  const handleSettingsClick = () => {
+    const event = new CustomEvent('openSettings');
+    window.dispatchEvent(event);
+    if (setSidebarOpen) {
+      setSidebarOpen(false);
+    }
+  };
+
   return (
-    <div className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg border-r border-slate-200 z-40 overflow-y-auto transition-transform duration-300 ${
+    <div className={`fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-800 shadow-lg border-r border-slate-200 dark:border-gray-700 z-40 overflow-y-auto transition-transform duration-300 ${
       sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
     }`}>
       <div className="p-6">
@@ -62,37 +80,37 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Brain className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-800">AI Business</h1>
-            <p className="text-sm text-slate-500">Assistant</p>
+            <h1 className="text-xl font-bold text-slate-800 dark:text-white">AI Business</h1>
+            <p className="text-sm text-slate-500 dark:text-gray-400">Assistant</p>
           </div>
         </div>
         
         {/* User Profile */}
         {user && (
-          <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="mb-6 p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600">
             <div className="flex items-center space-x-3">
               {user.avatar ? (
                 <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full" />
               ) : (
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
                   <User className="w-5 h-5 text-blue-600" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{user.name}</p>
-                <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{user.name}</p>
+                <p className="text-xs text-slate-500 dark:text-gray-400 truncate">{user.email}</p>
               </div>
             </div>
           </div>
         )}
         
         {/* Tier Information */}
-        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="flex items-center space-x-2 mb-2">
             <Crown className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-semibold text-blue-800">{tierInfo.name} Plan</span>
+            <span className="text-sm font-semibold text-blue-800 dark:text-blue-300">{tierInfo.name} Plan</span>
           </div>
-          <div className="space-y-1 text-xs text-blue-700">
+          <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400">
             <div className="flex justify-between">
               <span>Content:</span>
               <span>{usage.contentGenerations || 0}/{tierInfo.limits.contentGenerations === -1 ? '∞' : tierInfo.limits.contentGenerations}</span>
@@ -117,8 +135,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => handleMenuClick(item.id)}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
                   activeSection === item.id
-                    ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-r-4 border-blue-600'
+                    : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
                 <IconComponent className="w-5 h-5" />
@@ -129,27 +147,35 @@ const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
       
-      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-200 bg-white">
+      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <button
           onClick={() => setShowChat(true)}
-          className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-2"
         >
           <MessageCircle className="w-5 h-5" />
           <span className="font-medium">AI Assistant</span>
         </button>
         
-        <button className="w-full flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors mt-2">
-          onClick={() => {
-            const event = new CustomEvent('openSettings');
-            window.dispatchEvent(event);
-          }}
-          <Settings className="w-5 h-5" />
-          <span className="font-medium">Settings</span>
-        </button>
+        <div className="flex space-x-2 mb-2">
+          <button 
+            onClick={handleSettingsClick}
+            className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="text-sm font-medium">Settings</span>
+          </button>
+          
+          <button 
+            onClick={toggleDarkMode}
+            className="flex items-center justify-center px-3 py-2 text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+        </div>
         
         <button 
           onClick={onLogout}
-          className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-2"
+          className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Logout</span>

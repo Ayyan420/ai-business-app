@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, CreditCard, Smartphone, Building, Shield, Check } from 'lucide-react';
-import { PAYMENT_METHODS, PaymentProcessor } from '../lib/payments';
+import { X, Building, Shield, Check, Copy, AlertCircle } from 'lucide-react';
 import { TIERS } from '../lib/tiers';
+import { database } from '../lib/database';
+import { emailService } from '../lib/supabase';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -11,213 +12,277 @@ interface PaymentModalProps {
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, selectedTier, user }) => {
-  const [selectedMethod, setSelectedMethod] = useState('jazzcash');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [step, setStep] = useState(1); // 1: method selection, 2: details, 3: confirmation
+  const [step, setStep] = useState(1); // 1: instructions, 2: confirmation
+  const [paymentData, setPaymentData] = useState({
+    accountName: '',
+    transferAmount: '',
+    transactionId: '',
+    transferDate: '',
+    notes: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
 
   const tier = TIERS[selectedTier];
-  const method = PAYMENT_METHODS.find(m => m.id === selectedMethod);
-  const total = method ? PaymentProcessor.calculateTotal(tier.price, selectedMethod) : tier.price;
-
-  const handlePayment = async () => {
-    setIsProcessing(true);
-    
-    try {
-      const result = await PaymentProcessor.processPayment(
-        total,
-        'USD',
-        selectedMethod,
-        { ...user, selectedTier }
-      );
-      
-      if (result.success) {
-        // Update user tier
-        localStorage.setItem('userTier', selectedTier);
-        alert(`Payment successful! Welcome to ${tier.name} plan. Transaction ID: ${result.transactionId}`);
-        onClose();
-        window.location.reload();
-      } else {
-        alert(`Payment failed: ${result.error}`);
-      }
-    } catch (error) {
-      alert('Payment processing error. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
+  const bankDetails = {
+    bankName: 'Meezan Bank Limited',
+    accountTitle: 'AI Business Solutions',
+    accountNumber: '01234567890123',
+    iban: 'PK36MEZN0001234567890123',
+    branchCode: '0123',
+    swiftCode: 'MEZNPKKA'
   };
 
-  const getMethodIcon = (type: string) => {
-    switch (type) {
-      case 'card': return CreditCard;
-      case 'mobile': return Smartphone;
-      case 'bank': return Building;
-      default: return CreditCard;
+  const copyBankDetails = () => {
+    const details = `Bank: ${bankDetails.bankName}
+Account Title: ${bankDetails.accountTitle}
+Account Number: ${bankDetails.accountNumber}
+IBAN: ${bankDetails.iban}
+Amount: $${tier.price.toFixed(2)}`;
+    
+    navigator.clipboard.writeText(details);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!paymentData.accountName || !paymentData.transferAmount || !paymentData.transactionId) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Create payment record
+      const payment = {
+        amount: parseFloat(paymentData.transferAmount),
+        currency: 'USD',
+        status: 'pending',
+        payment_method: 'bank_transfer',
+        transaction_id: paymentData.transactionId,
+        tier: selectedTier,
+        billing_period_start: new Date().toISOString().split('T')[0],
+        billing_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        payment_details: {
+          account_name: paymentData.accountName,
+          transfer_date: paymentData.transferDate,
+          notes: paymentData.notes,
+          bank_details: bankDetails
+        }
+      };
+
+      const { data, error } = await database.createPayment(payment);
+
+      if (!error) {
+        // Send confirmation email
+        await emailService.sendPaymentConfirmation(user.email, {
+          name: user.name,
+          tier: tier.name,
+          amount: tier.price,
+          transactionId: paymentData.transactionId,
+          status: 'pending'
+        });
+
+        alert('Payment submitted successfully! We will verify your payment within 24 hours and update your plan.');
+        onClose();
+      } else {
+        alert('Error submitting payment. Please try again.');
+      }
+    } catch (error) {
+      alert('Error processing payment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-        <div className="p-6 border-b border-slate-200">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-800">Complete Payment</h2>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Bank Transfer Payment</h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-slate-500" />
+              <X className="w-6 h-6 text-slate-500" />
             </button>
           </div>
         </div>
 
         <div className="p-6">
           {/* Order Summary */}
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h3 className="font-semibold text-blue-800 mb-2">{tier.name} Plan</h3>
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">{tier.name} Plan</h3>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-blue-700">Monthly subscription:</span>
-                <span className="text-blue-800">${tier.price.toFixed(2)}</span>
+                <span className="text-blue-700 dark:text-blue-400">Monthly subscription:</span>
+                <span className="text-blue-800 dark:text-blue-300 font-semibold">${tier.price.toFixed(2)}</span>
               </div>
-              {method && method.fees > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-blue-700">Processing fee ({(method.fees * 100).toFixed(1)}%):</span>
-                  <span className="text-blue-800">${(tier.price * method.fees).toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-semibold border-t border-blue-300 pt-1">
-                <span className="text-blue-800">Total:</span>
-                <span className="text-blue-800">${total.toFixed(2)}</span>
+              <div className="flex justify-between font-semibold border-t border-blue-300 dark:border-blue-700 pt-1">
+                <span className="text-blue-800 dark:text-blue-300">Total Amount:</span>
+                <span className="text-blue-800 dark:text-blue-300">${tier.price.toFixed(2)}</span>
               </div>
             </div>
           </div>
 
           {step === 1 && (
-            <div>
-              <h3 className="font-semibold text-slate-800 mb-4">Select Payment Method</h3>
-              <div className="space-y-3">
-                {PAYMENT_METHODS.filter(m => m.available).map((method) => {
-                  const IconComponent = getMethodIcon(method.type);
-                  return (
-                    <button
-                      key={method.id}
-                      onClick={() => setSelectedMethod(method.id)}
-                      className={`w-full p-4 border rounded-lg text-left transition-colors ${
-                        selectedMethod === method.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <IconComponent className="w-6 h-6 text-slate-600" />
-                        <div className="flex-1">
-                          <h4 className="font-medium text-slate-800">{method.name}</h4>
-                          <p className="text-sm text-slate-600">
-                            {method.fees > 0 ? `${(method.fees * 100).toFixed(1)}% processing fee` : 'No additional fees'}
-                          </p>
-                        </div>
-                        {selectedMethod === method.id && (
-                          <Check className="w-5 h-5 text-blue-600" />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+            <div className="space-y-6">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-yellow-800 dark:text-yellow-300">Payment Instructions</h4>
+                    <p className="text-yellow-700 dark:text-yellow-400 text-sm mt-1">
+                      Please transfer the exact amount to our bank account and submit the payment details below.
+                    </p>
+                  </div>
+                </div>
               </div>
-              
+
+              <div className="bg-slate-50 dark:bg-gray-700 rounded-lg p-6 border">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-slate-800 dark:text-white flex items-center space-x-2">
+                    <Building className="w-5 h-5" />
+                    <span>Bank Details</span>
+                  </h4>
+                  <button
+                    onClick={copyBankDetails}
+                    className="flex items-center space-x-2 px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/40 transition-colors"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <span>{copied ? 'Copied!' : 'Copy Details'}</span>
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">Bank Name:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.bankName}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">Account Title:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountTitle}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">Account Number:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">IBAN:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.iban}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">Branch Code:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.branchCode}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">SWIFT Code:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.swiftCode}</p>
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                  <p className="text-green-800 dark:text-green-300 font-semibold">
+                    Transfer Amount: ${tier.price.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-semibold text-slate-800 dark:text-white">Payment Confirmation Details</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Your Account Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={paymentData.accountName}
+                      onChange={(e) => setPaymentData(prev => ({ ...prev, accountName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="Name on your bank account"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Transfer Amount *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={paymentData.transferAmount}
+                      onChange={(e) => setPaymentData(prev => ({ ...prev, transferAmount: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      placeholder={tier.price.toFixed(2)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Transaction ID / Reference *
+                    </label>
+                    <input
+                      type="text"
+                      value={paymentData.transactionId}
+                      onChange={(e) => setPaymentData(prev => ({ ...prev, transactionId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="Bank transaction reference"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Transfer Date
+                    </label>
+                    <input
+                      type="date"
+                      value={paymentData.transferDate}
+                      onChange={(e) => setPaymentData(prev => ({ ...prev, transferDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                    Additional Notes
+                  </label>
+                  <textarea
+                    value={paymentData.notes}
+                    onChange={(e) => setPaymentData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none dark:bg-gray-700 dark:text-white"
+                    placeholder="Any additional information about the transfer..."
+                  />
+                </div>
+              </div>
+
               <button
-                onClick={() => setStep(2)}
-                className="w-full mt-6 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={handleSubmitPayment}
+                disabled={isSubmitting || !paymentData.accountName || !paymentData.transferAmount || !paymentData.transactionId}
+                className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continue
+                {isSubmitting ? 'Submitting Payment...' : 'Submit Payment Confirmation'}
               </button>
             </div>
           )}
 
-          {step === 2 && (
-            <div>
-              <h3 className="font-semibold text-slate-800 mb-4">Payment Details</h3>
-              
-              {selectedMethod === 'card' && (
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Card Number"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="MM/YY"
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="CVV"
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Cardholder Name"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
-
-              {(selectedMethod === 'jazzcash' || selectedMethod === 'easypaisa') && (
-                <div className="space-y-4">
-                  <input
-                    type="tel"
-                    placeholder="Mobile Number (03XXXXXXXXX)"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input
-                    type="password"
-                    placeholder="Mobile Account PIN"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
-
-              {selectedMethod === 'bank_transfer' && (
-                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <h4 className="font-medium text-yellow-800 mb-2">Bank Transfer Details</h4>
-                  <div className="text-sm text-yellow-700 space-y-1">
-                    <p><strong>Bank:</strong> Meezan Bank</p>
-                    <p><strong>Account:</strong> 01234567890123</p>
-                    <p><strong>Title:</strong> AI Business Solutions</p>
-                    <p><strong>Amount:</strong> ${total.toFixed(2)}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={() => setStep(1)}
-                  className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handlePayment}
-                  disabled={isProcessing}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {isProcessing ? 'Processing...' : `Pay $${total.toFixed(2)}`}
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Security Notice */}
-          <div className="mt-6 p-3 bg-green-50 rounded-lg border border-green-200">
+          <div className="mt-6 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <div className="flex items-center space-x-2">
               <Shield className="w-4 h-4 text-green-600" />
-              <span className="text-sm text-green-700">
-                Your payment is secured with 256-bit SSL encryption
+              <span className="text-sm text-green-700 dark:text-green-400">
+                Your payment will be verified within 24 hours and your plan will be activated automatically.
               </span>
             </div>
           </div>
