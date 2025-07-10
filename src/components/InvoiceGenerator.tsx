@@ -54,7 +54,14 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
     companyEmail: 'contact@yourcompany.com',
     companyPhone: '+1 (555) 123-4567',
     notes: 'Thank you for your business!',
-    terms: 'Payment is due within 30 days of invoice date.'
+    terms: 'Payment is due within 30 days of invoice date.',
+    taxRate: 10,
+    paymentInfo: {
+      bankName: 'Meezan Bank Limited',
+      accountTitle: 'Your Business Name',
+      accountNumber: '01234567890123',
+      iban: 'PK36MEZN0001234567890123'
+    }
   });
   
   const [showPreview, setShowPreview] = useState(false);

@@ -59,19 +59,26 @@ const MarketingTools: React.FC = () => {
       setShowUpgradeModal(true);
       return;
     }
+    
     setIsGenerating(true);
     
     try {
-      const prompt = `Create ${selectedTool} content for:
+      const enhancedPrompt = `Create high-converting ${selectedTool} content for:
 Target Audience: ${formData.targetAudience}
 Product/Service: ${formData.product}
 Key Benefits: ${formData.benefits}
 Tone: ${formData.tone}
 Platform: ${formData.platform}
 
-Please create compelling, professional content that converts.`;
+Requirements:
+- Include compelling headlines and CTAs
+- Focus on benefits over features
+- Use persuasive language appropriate for ${formData.tone} tone
+- Optimize for ${formData.platform} platform
+- Include relevant hashtags if social media
+- Make it conversion-focused and actionable`;
 
-      const content = await deepseekAI.generateContent(prompt, selectedTool);
+      const content = await deepseekAI.generateContent(enhancedPrompt, selectedTool);
       setGeneratedContent(content);
       
       // Update usage

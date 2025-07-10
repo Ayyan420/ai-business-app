@@ -1,4 +1,5 @@
 import React from 'react';
+import React, { useState } from 'react';
 import { X, Check, Crown, Zap } from 'lucide-react';
 import { TIERS, UserTier } from '../lib/tiers';
 import PaymentModal from './PaymentModal';
