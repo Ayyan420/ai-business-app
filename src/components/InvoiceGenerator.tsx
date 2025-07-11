@@ -129,18 +129,21 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
     return invoiceData.items.reduce((sum, item) => sum + item.amount, 0);
   };
 
-  const calculateTax = () => {
-    const subtotal = calculateSubtotal();
-    return (subtotal * invoiceData.taxRate) / 100;
+  const calculateTax = (subtotal?: number) => {
+    const baseAmount = subtotal || calculateSubtotal();
+    return (baseAmount * invoiceData.taxRate) / 100;
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
+    const subtotal = calculateSubtotal();
+    const tax = calculateTax(subtotal);
+    return subtotal + tax;
   };
 
   // Update tax amount when tax rate or items change
   React.useEffect(() => {
-    const newTaxAmount = calculateTax();
+    const subtotal = calculateSubtotal();
+    const newTaxAmount = calculateTax(subtotal);
     setInvoiceData(prev => ({ ...prev, taxAmount: newTaxAmount }));
   }, [invoiceData.taxRate, invoiceData.items]);
 
@@ -580,7 +583,9 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
         <div className="mt-4 p-4 bg-slate-50 rounded-lg border">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Tax Rate (%)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Tax Rate (%)
+              </label>
               <input
                 type="number"
                 value={invoiceData.taxRate}
@@ -593,7 +598,9 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Tax Amount</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Tax Amount
+              </label>
               <input
                 type="text"
                 value={`$${calculateTax().toFixed(2)}`}

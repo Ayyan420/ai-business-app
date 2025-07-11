@@ -75,10 +75,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Mobile Overlay */}
-      {sidebarOpen && (
+      {sidebarOpen && setSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setSidebarOpen && setSidebarOpen(false)}
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
@@ -88,7 +88,16 @@ const Sidebar: React.FC<SidebarProps> = ({
       } lg:translate-x-0`}>
         
         {/* Mobile Close Button */}
-        <div className="lg:hidden flex justify-end p-4">
+        {setSidebarOpen && (
+          <div className="lg:hidden flex justify-end p-4">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-slate-500 dark:text-gray-400" />
+            </button>
+          </div>
+        )}
           <button
             onClick={() => setSidebarOpen && setSidebarOpen(false)}
             className="p-2 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-lg transition-colors"

@@ -37,6 +37,7 @@ const MarketingTools: React.FC = () => {
 
   // Reset form when tool changes
   useEffect(() => {
+    console.log('🔄 Tool changed to:', selectedTool);
     setFormData({
       targetAudience: '',
       product: '',
@@ -158,6 +159,7 @@ Requirements:
   };
 
   const resetForm = () => {
+    console.log('🔄 Resetting form');
     setFormData({
       targetAudience: '',
       product: '',
