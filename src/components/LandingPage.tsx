@@ -79,46 +79,47 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
   const pricingPlans = [
     {
-      name: 'Starter',
-      price: '$29',
+      name: 'Free',
+      price: '$0',
       period: '/month',
-      description: 'Perfect for small businesses and entrepreneurs',
+      description: 'Perfect for getting started',
       features: [
-        'AI Marketing Tools',
-        'Basic Invoice Generation',
-        'Email Support',
-        '5 Projects',
-        'Standard Templates'
+        '5 Content Generations',
+        '2 Invoices',
+        '1 Campaign',
+        '10 Tasks',
+        'Email Support'
       ],
       popular: false
     },
     {
-      name: 'Professional',
-      price: '$79',
+      name: 'Starter',
+      price: '$2',
       period: '/month',
-      description: 'Ideal for growing businesses and teams',
+      description: 'Ideal for small businesses',
       features: [
-        'All Starter Features',
-        'Advanced Analytics',
-        'Custom Branding',
-        'Unlimited Projects',
+        '50 Content Generations',
+        '25 Invoices',
+        '10 Campaigns',
+        '100 Tasks',
         'Priority Support',
-        'Team Collaboration'
+        'Basic Team Features'
       ],
       popular: true
     },
     {
-      name: 'Enterprise',
-      price: '$199',
+      name: 'Professional',
+      price: '$5',
       period: '/month',
-      description: 'For large organizations with complex needs',
+      description: 'For growing businesses',
       features: [
-        'All Professional Features',
-        'Custom AI Training',
-        'API Access',
-        'Dedicated Account Manager',
-        'Advanced Security',
-        'Custom Integrations'
+        'Unlimited Everything',
+        'Advanced Analytics',
+        'Team Collaboration',
+        'Custom Branding',
+        'Portfolio Builder',
+        'CRM & Lead Management',
+        '24/7 Support'
       ],
       popular: false
     }
@@ -262,7 +263,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       <section id="pricing" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-800 mb-4">Simple, Transparent Pricing</h2>
+            <h2 className="text-4xl font-bold text-slate-800 mb-4">Simple, Affordable Pricing</h2>
             <p className="text-lg text-slate-600">Choose the plan that fits your business needs</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

@@ -20,12 +20,12 @@ export const TIERS: Record<string, UserTier> = {
     name: 'Free',
     price: 0,
     limits: {
-      contentGenerations: 10,
-      invoices: 5,
-      campaigns: 3,
-      tasks: 20,
-      aiQueries: 50,
-      pdfExports: 5
+      contentGenerations: 5,
+      invoices: 2,
+      campaigns: 1,
+      tasks: 10,
+      aiQueries: 20,
+      pdfExports: 2
     },
     features: [
       'Basic AI content generation',
@@ -34,28 +34,28 @@ export const TIERS: Record<string, UserTier> = {
       'Email support'
     ]
   },
-  pro: {
-    name: 'Professional',
-    price: 9.99, // Very affordable for Pakistan market
+  starter: {
+    name: 'Starter',
+    price: 2, // $2 USD
     limits: {
-      contentGenerations: 100,
-      invoices: 50,
-      campaigns: 25,
-      tasks: 200,
-      aiQueries: 500,
-      pdfExports: 50
+      contentGenerations: 50,
+      invoices: 25,
+      campaigns: 10,
+      tasks: 100,
+      aiQueries: 200,
+      pdfExports: 25
     },
     features: [
-      'Advanced AI content generation',
+      'Enhanced AI content generation',
       'Professional invoice templates',
       'Campaign analytics',
       'Priority support',
-      'Custom branding'
+      'Basic team features'
     ]
   },
-  business: {
-    name: 'Business',
-    price: 19.99,
+  pro: {
+    name: 'Professional',
+    price: 5, // $5 USD
     limits: {
       contentGenerations: -1, // Unlimited
       invoices: -1,
@@ -68,9 +68,10 @@ export const TIERS: Record<string, UserTier> = {
       'Unlimited everything',
       'Advanced analytics',
       'Team collaboration',
-      'API access',
-      'Custom integrations',
-      '24/7 phone support'
+      'Custom branding',
+      'Portfolio builder',
+      'CRM & Lead management',
+      '24/7 support'
     ]
   }
 };

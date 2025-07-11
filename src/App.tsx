@@ -14,7 +14,8 @@ import PortfolioBuilder from './components/PortfolioBuilder';
 import CRMDashboard from './components/CRMDashboard';
 import TeamManagement from './components/TeamManagement';
 import { database } from './lib/database';
-import { emailService } from './lib/supabase';
+import { emailService, auth, isDemoMode } from './lib/supabase';
+import { Menu } from 'lucide-react';
 
 interface User {
   id: string;
@@ -48,19 +49,42 @@ function App() {
   const initializeApp = async () => {
     setLoading(true);
     
-    // Check for existing user session
-    const savedUser = localStorage.getItem('aiBusinessUser');
-    if (savedUser) {
-      const userData = JSON.parse(savedUser);
-      setUser(userData);
-      setCurrentPage('dashboard');
+    try {
+      // Check for existing user session
+      const { data: sessionData } = await auth.getCurrentSession();
       
-      // Load user profile from database
-      const { data: profile } = await database.getCurrentUser();
-      if (profile) {
-        setUser(profile);
-        localStorage.setItem('aiBusinessUser', JSON.stringify(profile));
+      if (sessionData?.session?.user) {
+        const userData = sessionData.session.user;
+        
+        // Get user profile from database
+        const { data: profile } = await database.getCurrentUser();
+        
+        if (profile) {
+          setUser(profile);
+          setCurrentPage('dashboard');
+        } else {
+          // Create user profile if it doesn't exist
+          const newUser = {
+            id: userData.id,
+            name: userData.user_metadata?.name || userData.email?.split('@')[0] || 'User',
+            email: userData.email || '',
+            tier: 'free'
+          };
+          
+          setUser(newUser);
+          setCurrentPage('dashboard');
+        }
+      } else {
+        // Check localStorage for demo user
+        const savedUser = localStorage.getItem('aiBusinessUser');
+        if (savedUser) {
+          const userData = JSON.parse(savedUser);
+          setUser(userData);
+          setCurrentPage('dashboard');
+        }
       }
+    } catch (error) {
+      console.error('App initialization error:', error);
     }
     
     setLoading(false);
@@ -72,16 +96,27 @@ function App() {
     setCurrentPage('dashboard');
     
     // Send welcome email
-    await emailService.sendWelcomeEmail(userData.email, userData.name);
+    try {
+      await emailService.sendWelcomeEmail(userData.email, userData.name);
+    } catch (error) {
+      console.error('Welcome email error:', error);
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
     setUser(null);
     localStorage.removeItem('aiBusinessUser');
     localStorage.removeItem('userTier');
     localStorage.removeItem('userTierUsage');
     setCurrentPage('landing');
     setActiveSection('dashboard');
+    setSidebarOpen(false);
   };
 
   const renderContent = () => {
@@ -109,10 +144,15 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading your AI Business Assistant...</p>
+          <p className="text-slate-600 dark:text-gray-400">Loading your AI Business Assistant...</p>
+          {isDemoMode && (
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
+              Running in demo mode - Connect Supabase for full functionality
+            </p>
+          )}
         </div>
       </div>
     );
@@ -140,20 +180,10 @@ function App() {
         {/* Mobile menu button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-slate-200 dark:border-gray-700"
+          className="lg:hidden fixed top-4 left-4 z-50 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-slate-200 dark:border-gray-700"
         >
-          <svg className="w-6 h-6 text-slate-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <Menu className="w-6 h-6 text-slate-600 dark:text-gray-300" />
         </button>
-        
-        {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div 
-            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
         
         <div className="flex min-h-screen">
           <Sidebar 
@@ -165,8 +195,9 @@ function App() {
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
           />
+          
           <main className="flex-1 lg:ml-64 min-h-screen">
-            <div className="p-4 md:p-8 pt-16 lg:pt-8">
+            <div className="p-4 md:p-8 pt-20 lg:pt-8">
               {renderContent()}
             </div>
           </main>

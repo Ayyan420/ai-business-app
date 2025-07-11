@@ -35,6 +35,14 @@ interface InvoiceData {
   companyPhone: string;
   notes: string;
   terms: string;
+  taxRate: number;
+  taxAmount: number;
+  paymentInfo: {
+    bankName: string;
+    accountTitle: string;
+    accountNumber: string;
+    iban: string;
+  };
 }
 
 interface InvoiceGeneratorProps {
@@ -55,7 +63,8 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
     companyPhone: '+1 (555) 123-4567',
     notes: 'Thank you for your business!',
     terms: 'Payment is due within 30 days of invoice date.',
-    taxRate: 10,
+    taxRate: 0,
+    taxAmount: 0,
     paymentInfo: {
       bankName: 'Meezan Bank Limited',
       accountTitle: 'Your Business Name',
@@ -121,12 +130,19 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
   };
 
   const calculateTax = () => {
-    return calculateSubtotal() * 0.1; // 10% tax
+    const subtotal = calculateSubtotal();
+    return (subtotal * invoiceData.taxRate) / 100;
   };
 
   const calculateTotal = () => {
     return calculateSubtotal() + calculateTax();
   };
+
+  // Update tax amount when tax rate or items change
+  React.useEffect(() => {
+    const newTaxAmount = calculateTax();
+    setInvoiceData(prev => ({ ...prev, taxAmount: newTaxAmount }));
+  }, [invoiceData.taxRate, invoiceData.items]);
 
   const generatePDF = async () => {
     // Check tier limits
@@ -191,6 +207,8 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
       client_email: invoiceData.clientEmail,
       client_address: invoiceData.clientAddress,
       amount: calculateTotal(),
+      tax_rate: invoiceData.taxRate,
+      tax_amount: calculateTax(),
       due_date: invoiceData.dueDate,
       items: invoiceData.items,
       company_info: {
@@ -200,6 +218,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
         phone: invoiceData.companyPhone,
         logo: invoiceData.logo
       },
+      payment_info: invoiceData.paymentInfo,
       notes: invoiceData.notes,
       terms: invoiceData.terms,
       status: 'draft'
@@ -274,13 +293,38 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
             <span>Subtotal:</span>
             <span>${calculateSubtotal().toFixed(2)}</span>
           </div>
-          <div className="flex justify-between py-2">
-            <span>Tax (10%):</span>
-            <span>${calculateTax().toFixed(2)}</span>
-          </div>
+          {invoiceData.taxRate > 0 && (
+            <div className="flex justify-between py-2">
+              <span>Tax ({invoiceData.taxRate}%):</span>
+              <span>${calculateTax().toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between py-2 border-t border-slate-300 font-bold text-lg">
             <span>Total:</span>
             <span>${calculateTotal().toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Information */}
+      <div className="mb-8 p-4 bg-slate-50 rounded-lg border">
+        <h4 className="font-semibold text-slate-800 mb-3">Payment Information</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-slate-600">Bank Name:</p>
+            <p className="font-medium text-slate-800">{invoiceData.paymentInfo.bankName}</p>
+          </div>
+          <div>
+            <p className="text-slate-600">Account Title:</p>
+            <p className="font-medium text-slate-800">{invoiceData.paymentInfo.accountTitle}</p>
+          </div>
+          <div>
+            <p className="text-slate-600">Account Number:</p>
+            <p className="font-medium text-slate-800">{invoiceData.paymentInfo.accountNumber}</p>
+          </div>
+          <div>
+            <p className="text-slate-600">IBAN:</p>
+            <p className="font-medium text-slate-800">{invoiceData.paymentInfo.iban}</p>
           </div>
         </div>
       </div>
@@ -478,12 +522,6 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
           </button>
         </div>
 
-      
-      <TierUpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        currentFeature="invoice generation"
-      />
         <div className="space-y-3">
           {invoiceData.items.map((item, index) => (
             <div key={index} className="grid grid-cols-12 gap-3 items-end">
@@ -538,20 +576,103 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
           ))}
         </div>
 
+        {/* Tax Configuration */}
         <div className="mt-4 p-4 bg-slate-50 rounded-lg border">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Tax Rate (%)</label>
+              <input
+                type="number"
+                value={invoiceData.taxRate}
+                onChange={(e) => setInvoiceData(prev => ({ ...prev, taxRate: parseFloat(e.target.value) || 0 }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="0"
+                step="0.01"
+                min="0"
+                max="100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Tax Amount</label>
+              <input
+                type="text"
+                value={`$${calculateTax().toFixed(2)}`}
+                readOnly
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-100"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-slate-600">Subtotal:</span>
               <span className="font-medium">${calculateSubtotal().toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">Tax (10%):</span>
-              <span className="font-medium">${calculateTax().toFixed(2)}</span>
-            </div>
+            {invoiceData.taxRate > 0 && (
+              <div className="flex justify-between">
+                <span className="text-slate-600">Tax ({invoiceData.taxRate}%):</span>
+                <span className="font-medium">${calculateTax().toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t pt-2">
               <span className="font-bold text-slate-800">Total:</span>
               <span className="text-xl font-bold text-green-600">${calculateTotal().toFixed(2)}</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Information */}
+      <div className="bg-slate-50 rounded-lg p-6 border">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4">Payment Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Bank Name</label>
+            <input
+              type="text"
+              value={invoiceData.paymentInfo.bankName}
+              onChange={(e) => setInvoiceData(prev => ({
+                ...prev,
+                paymentInfo: { ...prev.paymentInfo, bankName: e.target.value }
+              }))}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Account Title</label>
+            <input
+              type="text"
+              value={invoiceData.paymentInfo.accountTitle}
+              onChange={(e) => setInvoiceData(prev => ({
+                ...prev,
+                paymentInfo: { ...prev.paymentInfo, accountTitle: e.target.value }
+              }))}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Account Number</label>
+            <input
+              type="text"
+              value={invoiceData.paymentInfo.accountNumber}
+              onChange={(e) => setInvoiceData(prev => ({
+                ...prev,
+                paymentInfo: { ...prev.paymentInfo, accountNumber: e.target.value }
+              }))}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">IBAN</label>
+            <input
+              type="text"
+              value={invoiceData.paymentInfo.iban}
+              onChange={(e) => setInvoiceData(prev => ({
+                ...prev,
+                paymentInfo: { ...prev.paymentInfo, iban: e.target.value }
+              }))}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
           </div>
         </div>
       </div>
@@ -595,6 +716,12 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
           <span>Preview</span>
         </button>
       </div>
+      
+      <TierUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentFeature="invoice generation"
+      />
     </div>
   );
 };

@@ -1,21 +1,34 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Check if we have valid Supabase credentials
+export const hasValidSupabaseConfig = supabaseUrl && supabaseAnonKey && 
+  supabaseUrl !== 'your-supabase-project-url' && 
+  supabaseAnonKey !== 'your-supabase-anon-key' &&
+  supabaseUrl.includes('supabase.co')
+
+export const supabase = hasValidSupabaseConfig 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null
 
 // Check if we're in demo mode (no real Supabase connection)
-export const isDemoMode = !import.meta.env.VITE_SUPABASE_URL || 
-  import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-  supabaseUrl === 'https://your-project.supabase.co'
+export const isDemoMode = !hasValidSupabaseConfig
+
+console.log('Supabase Config:', { 
+  hasValidConfig: hasValidSupabaseConfig, 
+  isDemoMode, 
+  url: supabaseUrl ? 'Set' : 'Missing',
+  key: supabaseAnonKey ? 'Set' : 'Missing'
+})
 
 // Authentication helpers
 export const auth = {
   async signUp(email: string, password: string, userData: any) {
-    if (isDemoMode) {
-      // Demo mode - simulate successful signup
+    if (isDemoMode || !supabase) {
+      console.log('Demo mode: Simulating signup')
       const user = {
         id: `demo-${Date.now()}`,
         email,
@@ -26,29 +39,45 @@ export const auth = {
       return { data: { user }, error: null }
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData
-      }
-    })
-
-    if (data.user && !error) {
-      // Create user profile
-      await supabase.from('users').insert({
-        id: data.user.id,
-        email: data.user.email,
-        name: userData.name,
-        tier: 'free'
+    try {
+      console.log('Attempting Supabase signup for:', email)
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: userData
+        }
       })
-    }
 
-    return { data, error }
+      console.log('Signup result:', { data, error })
+
+      if (data.user && !error) {
+        // Create user profile in our users table
+        console.log('Creating user profile in database')
+        const { error: profileError } = await supabase.from('users').insert({
+          id: data.user.id,
+          email: data.user.email,
+          name: userData.name,
+          tier: 'free'
+        })
+        
+        if (profileError) {
+          console.error('Profile creation error:', profileError)
+        } else {
+          console.log('User profile created successfully')
+        }
+      }
+
+      return { data, error }
+    } catch (error) {
+      console.error('Signup error:', error)
+      return { data: null, error: error as any }
+    }
   },
 
   async signIn(email: string, password: string) {
-    if (isDemoMode) {
+    if (isDemoMode || !supabase) {
+      console.log('Demo mode: Simulating signin')
       const demoUser = localStorage.getItem('demoUser')
       if (demoUser) {
         return { data: { user: JSON.parse(demoUser) }, error: null }
@@ -58,17 +87,26 @@ export const auth = {
         id: `demo-${Date.now()}`,
         email,
         name: email.split('@')[0],
+        tier: 'free',
         created_at: new Date().toISOString()
       }
       localStorage.setItem('demoUser', JSON.stringify(user))
       return { data: { user }, error: null }
     }
 
-    return await supabase.auth.signInWithPassword({ email, password })
+    try {
+      console.log('Attempting Supabase signin for:', email)
+      const result = await supabase.auth.signInWithPassword({ email, password })
+      console.log('Signin result:', result)
+      return result
+    } catch (error) {
+      console.error('Signin error:', error)
+      return { data: null, error: error as any }
+    }
   },
 
   async signOut() {
-    if (isDemoMode) {
+    if (isDemoMode || !supabase) {
       localStorage.removeItem('demoUser')
       return { error: null }
     }
@@ -76,68 +114,39 @@ export const auth = {
   },
 
   async getUser() {
-    if (isDemoMode) {
+    if (isDemoMode || !supabase) {
       const demoUser = localStorage.getItem('demoUser')
       return demoUser ? { data: { user: JSON.parse(demoUser) }, error: null } : { data: { user: null }, error: null }
     }
     return await supabase.auth.getUser()
+  },
+
+  async getCurrentSession() {
+    if (isDemoMode || !supabase) {
+      const demoUser = localStorage.getItem('demoUser')
+      return demoUser ? { data: { session: { user: JSON.parse(demoUser) } }, error: null } : { data: { session: null }, error: null }
+    }
+    return await supabase.auth.getSession()
   }
 }
 
 // Email service
 export const emailService = {
   async sendWelcomeEmail(userEmail: string, userName: string) {
-    if (isDemoMode) {
-      console.log(`Welcome email sent to ${userEmail}`)
-      return { success: true }
-    }
-    
-    // In production, integrate with email service like Resend, SendGrid, etc.
-    try {
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: userEmail,
-          template: 'welcome',
-          data: { name: userName }
-        })
-      })
-      return { success: response.ok }
-    } catch (error) {
-      console.error('Email send failed:', error)
-      return { success: false }
-    }
+    console.log(`Welcome email would be sent to ${userEmail}`)
+    return { success: true }
   },
 
   async sendPaymentConfirmation(userEmail: string, paymentData: any) {
-    if (isDemoMode) {
-      console.log(`Payment confirmation sent to ${userEmail}`)
-      return { success: true }
-    }
-    
-    try {
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: userEmail,
-          template: 'payment-confirmation',
-          data: paymentData
-        })
-      })
-      return { success: response.ok }
-    } catch (error) {
-      console.error('Email send failed:', error)
-      return { success: false }
-    }
+    console.log(`Payment confirmation would be sent to ${userEmail}`)
+    return { success: true }
   }
 }
 
 // Real-time subscriptions
 export const subscriptions = {
   subscribeToUserUpdates(userId: string, callback: (payload: any) => void) {
-    if (isDemoMode) return () => {}
+    if (isDemoMode || !supabase) return () => {}
     
     const subscription = supabase
       .channel('user-updates')
@@ -151,7 +160,7 @@ export const subscriptions = {
   },
 
   subscribeToPayments(userId: string, callback: (payload: any) => void) {
-    if (isDemoMode) return () => {}
+    if (isDemoMode || !supabase) return () => {}
     
     const subscription = supabase
       .channel('payment-updates')
@@ -168,45 +177,64 @@ export const subscriptions = {
 // Database functions
 export const dbFunctions = {
   async updateUserTier(userId: string, newTier: string) {
-    if (isDemoMode) {
+    if (isDemoMode || !supabase) {
       localStorage.setItem('userTier', newTier)
+      const demoUser = JSON.parse(localStorage.getItem('demoUser') || '{}')
+      demoUser.tier = newTier
+      localStorage.setItem('demoUser', JSON.stringify(demoUser))
       return { data: { tier: newTier }, error: null }
     }
     
-    return await supabase
-      .from('users')
-      .update({ tier: newTier, updated_at: new Date().toISOString() })
-      .eq('id', userId)
-      .select()
-      .single()
+    try {
+      console.log('Updating user tier:', { userId, newTier })
+      return await supabase
+        .from('users')
+        .update({ tier: newTier, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select()
+        .single()
+    } catch (error) {
+      console.error('Update tier error:', error)
+      return { data: null, error: error as any }
+    }
   },
 
   async getUserProfile(userId: string) {
-    if (isDemoMode) {
+    if (isDemoMode || !supabase) {
       const demoUser = localStorage.getItem('demoUser')
       return demoUser ? { data: JSON.parse(demoUser), error: null } : { data: null, error: 'User not found' }
     }
     
-    return await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
+    try {
+      return await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
+    } catch (error) {
+      console.error('Get profile error:', error)
+      return { data: null, error: error as any }
+    }
   },
 
   async updateUserProfile(userId: string, updates: any) {
-    if (isDemoMode) {
+    if (isDemoMode || !supabase) {
       const demoUser = JSON.parse(localStorage.getItem('demoUser') || '{}')
       const updatedUser = { ...demoUser, ...updates, updated_at: new Date().toISOString() }
       localStorage.setItem('demoUser', JSON.stringify(updatedUser))
       return { data: updatedUser, error: null }
     }
     
-    return await supabase
-      .from('users')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', userId)
-      .select()
-      .single()
+    try {
+      return await supabase
+        .from('users')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select()
+        .single()
+    } catch (error) {
+      console.error('Update profile error:', error)
+      return { data: null, error: error as any }
+    }
   }
 }

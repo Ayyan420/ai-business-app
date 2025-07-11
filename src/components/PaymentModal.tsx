@@ -12,7 +12,6 @@ interface PaymentModalProps {
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, selectedTier, user }) => {
-  const [step, setStep] = useState(1); // 1: instructions, 2: confirmation
   const [paymentData, setPaymentData] = useState({
     accountName: '',
     transferAmount: '',
@@ -129,153 +128,151 @@ Amount: $${tier.price.toFixed(2)}`;
             </div>
           </div>
 
-          {step === 1 && (
-            <div className="space-y-6">
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-yellow-800 dark:text-yellow-300">Payment Instructions</h4>
-                    <p className="text-yellow-700 dark:text-yellow-400 text-sm mt-1">
-                      Please transfer the exact amount to our bank account and submit the payment details below.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-gray-700 rounded-lg p-6 border">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-semibold text-slate-800 dark:text-white flex items-center space-x-2">
-                    <Building className="w-5 h-5" />
-                    <span>Bank Details</span>
-                  </h4>
-                  <button
-                    onClick={copyBankDetails}
-                    className="flex items-center space-x-2 px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/40 transition-colors"
-                  >
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    <span>{copied ? 'Copied!' : 'Copy Details'}</span>
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-600 dark:text-gray-400">Bank Name:</p>
-                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.bankName}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600 dark:text-gray-400">Account Title:</p>
-                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountTitle}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600 dark:text-gray-400">Account Number:</p>
-                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600 dark:text-gray-400">IBAN:</p>
-                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.iban}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600 dark:text-gray-400">Branch Code:</p>
-                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.branchCode}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600 dark:text-gray-400">SWIFT Code:</p>
-                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.swiftCode}</p>
-                  </div>
-                </div>
-                
-                <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
-                  <p className="text-green-800 dark:text-green-300 font-semibold">
-                    Transfer Amount: ${tier.price.toFixed(2)}
+          <div className="space-y-6">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-yellow-800 dark:text-yellow-300">Payment Instructions</h4>
+                  <p className="text-yellow-700 dark:text-yellow-400 text-sm mt-1">
+                    Please transfer the exact amount to our bank account and submit the payment details below.
                   </p>
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-4">
-                <h4 className="font-semibold text-slate-800 dark:text-white">Payment Confirmation Details</h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Your Account Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={paymentData.accountName}
-                      onChange={(e) => setPaymentData(prev => ({ ...prev, accountName: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Name on your bank account"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Transfer Amount *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={paymentData.transferAmount}
-                      onChange={(e) => setPaymentData(prev => ({ ...prev, transferAmount: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      placeholder={tier.price.toFixed(2)}
-                      required
-                    />
-                  </div>
+            <div className="bg-slate-50 dark:bg-gray-700 rounded-lg p-6 border">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-slate-800 dark:text-white flex items-center space-x-2">
+                  <Building className="w-5 h-5" />
+                  <span>Bank Details</span>
+                </h4>
+                <button
+                  onClick={copyBankDetails}
+                  className="flex items-center space-x-2 px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/40 transition-colors"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  <span>{copied ? 'Copied!' : 'Copy Details'}</span>
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-600 dark:text-gray-400">Bank Name:</p>
+                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.bankName}</p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Transaction ID / Reference *
-                    </label>
-                    <input
-                      type="text"
-                      value={paymentData.transactionId}
-                      onChange={(e) => setPaymentData(prev => ({ ...prev, transactionId: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Bank transaction reference"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Transfer Date
-                    </label>
-                    <input
-                      type="date"
-                      value={paymentData.transferDate}
-                      onChange={(e) => setPaymentData(prev => ({ ...prev, transferDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </div>
+                <div>
+                  <p className="text-slate-600 dark:text-gray-400">Account Title:</p>
+                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountTitle}</p>
                 </div>
+                <div>
+                  <p className="text-slate-600 dark:text-gray-400">Account Number:</p>
+                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountNumber}</p>
+                </div>
+                <div>
+                  <p className="text-slate-600 dark:text-gray-400">IBAN:</p>
+                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.iban}</p>
+                </div>
+                <div>
+                  <p className="text-slate-600 dark:text-gray-400">Branch Code:</p>
+                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.branchCode}</p>
+                </div>
+                <div>
+                  <p className="text-slate-600 dark:text-gray-400">SWIFT Code:</p>
+                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.swiftCode}</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                <p className="text-green-800 dark:text-green-300 font-semibold">
+                  Transfer Amount: ${tier.price.toFixed(2)}
+                </p>
+              </div>
+            </div>
 
+            <div className="space-y-4">
+              <h4 className="font-semibold text-slate-800 dark:text-white">Payment Confirmation Details</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                    Additional Notes
+                    Your Account Name *
                   </label>
-                  <textarea
-                    value={paymentData.notes}
-                    onChange={(e) => setPaymentData(prev => ({ ...prev, notes: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none dark:bg-gray-700 dark:text-white"
-                    placeholder="Any additional information about the transfer..."
+                  <input
+                    type="text"
+                    value={paymentData.accountName}
+                    onChange={(e) => setPaymentData(prev => ({ ...prev, accountName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="Name on your bank account"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                    Transfer Amount *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={paymentData.transferAmount}
+                    onChange={(e) => setPaymentData(prev => ({ ...prev, transferAmount: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder={tier.price.toFixed(2)}
+                    required
                   />
                 </div>
               </div>
 
-              <button
-                onClick={handleSubmitPayment}
-                disabled={isSubmitting || !paymentData.accountName || !paymentData.transferAmount || !paymentData.transactionId}
-                className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Submitting Payment...' : 'Submit Payment Confirmation'}
-              </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                    Transaction ID / Reference *
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentData.transactionId}
+                    onChange={(e) => setPaymentData(prev => ({ ...prev, transactionId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="Bank transaction reference"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                    Transfer Date
+                  </label>
+                  <input
+                    type="date"
+                    value={paymentData.transferDate}
+                    onChange={(e) => setPaymentData(prev => ({ ...prev, transferDate: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                  Additional Notes
+                </label>
+                <textarea
+                  value={paymentData.notes}
+                  onChange={(e) => setPaymentData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none dark:bg-gray-700 dark:text-white"
+                  placeholder="Any additional information about the transfer..."
+                />
+              </div>
             </div>
-          )}
+
+            <button
+              onClick={handleSubmitPayment}
+              disabled={isSubmitting || !paymentData.accountName || !paymentData.transferAmount || !paymentData.transactionId}
+              className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Submitting Payment...' : 'Submit Payment Confirmation'}
+            </button>
+          </div>
 
           {/* Security Notice */}
           <div className="mt-6 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">

@@ -200,8 +200,8 @@ Time to work smarter, not harder! 💪
 
 ### Pricing That Makes Sense
 **Free Plan** - Get started with essential features
-**Pro Plan** - $9.99/month for growing businesses
-**Business Plan** - $19.99/month for unlimited everything
+**Starter Plan** - $2/month for growing businesses
+**Professional Plan** - $5/month for unlimited everything
 
 ### Ready to Transform Your Business?
 
@@ -217,40 +217,7 @@ Time to work smarter, not harder! 💪
 
 "Best business investment we've ever made. The ROI is incredible." - Mike C., Founder
 
-"Finally, an AI tool that actually understands business needs." - Lisa W., Entrepreneur`,
-
-      `# Stop Struggling with Manual Tasks
-
-## Join 50,000+ Businesses Already Winning with AI
-
-### The Problem:
-You're spending too much time on tasks that should be automated. Your current tools aren't delivering the results you need. You're working IN your business instead of ON your business.
-
-### The Solution:
-Our AI platform delivers:
-✅ **Instant Content Generation** - Blog posts, social media, ads, emails
-✅ **Automated Invoice Processing** - Professional invoices in seconds
-✅ **Smart Business Insights** - Analytics that actually help you grow
-✅ **24/7 Customer Support** - AI that never sleeps
-
-### Proof It Works:
-• 300% average productivity increase
-• 95% customer satisfaction rate
-• 50% reduction in manual work
-• $10,000+ average annual savings
-
-### Special Launch Offer:
-**60% OFF** your first year
-*Save $240 on Business Plan*
-
-[CLAIM YOUR DISCOUNT]
-
-*Offer expires in 48 hours*
-
-### Risk-Free Guarantee
-Try it for 30 days. If you don't save at least 10 hours per week, we'll refund every penny.
-
-[GET STARTED NOW]`
+"Finally, an AI tool that actually understands business needs." - Lisa W., Entrepreneur`
     ],
 
     'general': [
@@ -280,55 +247,34 @@ Try it for 30 days. If you don't save at least 10 hours per week, we'll refund e
 3. Set up automated workflows
 4. Monitor performance and adjust
 
-Would you like me to elaborate on any of these recommendations or help you create a specific implementation plan?`,
-
-      `Here's your personalized business growth strategy:
-
-**Current Challenges Analysis:**
-Most businesses struggle with:
-• Time-consuming manual tasks
-• Inconsistent marketing efforts
-• Poor financial tracking
-• Lack of customer insights
-
-**AI-Powered Solutions:**
-1. **Content Automation** - Generate professional marketing materials instantly
-2. **Financial Management** - Automate invoicing, expense tracking, and reporting
-3. **Customer Intelligence** - Use AI to understand and predict customer behavior
-4. **Process Optimization** - Identify and eliminate workflow bottlenecks
-
-**ROI Projections:**
-• Save 15-20 hours per week on routine tasks
-• Increase conversion rates by 25-40%
-• Reduce operational costs by 30%
-• Improve customer retention by 50%
-
-**Implementation Timeline:**
-Week 1-2: Set up core automation tools
-Week 3-4: Implement content generation workflows
-Month 2: Add advanced analytics and reporting
-Month 3: Scale and optimize all processes
-
-Ready to transform your business operations?`
+Would you like me to elaborate on any of these recommendations or help you create a specific implementation plan?`
     ]
   };
 
   async generateContent(prompt: string, type: string = 'general'): Promise<string> {
     try {
-      // Try multiple free AI APIs in sequence
-      const response = await this.tryMultipleAPIs(prompt, type);
+      // Try to use real AI APIs first
+      const response = await this.tryRealAI(prompt, type);
       if (response.success) {
         return response.content;
       }
     } catch (error) {
-      console.log('Free APIs unavailable, using intelligent templates');
+      console.log('Real AI APIs unavailable, using intelligent templates');
     }
 
     // Fallback to enhanced intelligent templates
     return this.generateIntelligentTemplate(prompt, type);
   }
 
-  private async tryMultipleAPIs(prompt: string, type: string): Promise<AIResponse> {
+  private async tryRealAI(prompt: string, type: string): Promise<AIResponse> {
+    // Try OpenAI-compatible free APIs
+    try {
+      const response = await this.tryOpenAICompatible(prompt, type);
+      if (response.success) return response;
+    } catch (error) {
+      console.log('OpenAI-compatible APIs failed, trying next...');
+    }
+
     // Try Hugging Face Inference API (free tier)
     try {
       const hfResponse = await this.tryHuggingFace(prompt);
@@ -337,71 +283,94 @@ Ready to transform your business operations?`
       console.log('Hugging Face API failed, trying next...');
     }
 
-    // Try OpenAI-compatible free APIs
+    // Try DeepSeek API if available
     try {
-      const openAIResponse = await this.tryOpenAICompatible(prompt);
-      if (openAIResponse.success) return openAIResponse;
+      const deepseekResponse = await this.tryDeepSeekAPI(prompt, type);
+      if (deepseekResponse.success) return deepseekResponse;
     } catch (error) {
-      console.log('OpenAI-compatible APIs failed, trying next...');
-    }
-
-    // Try local/edge AI models
-    try {
-      const localResponse = await this.tryLocalModels(prompt, type);
-      if (localResponse.success) return localResponse;
-    } catch (error) {
-      console.log('Local models failed, using templates...');
+      console.log('DeepSeek API failed, using templates...');
     }
 
     return { content: '', success: false };
   }
 
-  private async tryHuggingFace(prompt: string): Promise<AIResponse> {
-    const response = await fetch('https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_length: 500,
-          temperature: 0.7,
-          do_sample: true
-        }
-      })
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.generated_text && data.generated_text.length > 50) {
-        return { content: data.generated_text, success: true };
-      }
-    }
+  private async tryDeepSeekAPI(prompt: string, type: string): Promise<AIResponse> {
+    // This would use DeepSeek API if you have an API key
+    // For now, we'll use a mock implementation
+    const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
     
+    if (!apiKey) {
+      return { content: '', success: false };
+    }
+
+    try {
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a professional business content creator. Create compelling, conversion-focused ${type} content.`
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.7
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.choices && data.choices[0]?.message?.content) {
+          return { content: data.choices[0].message.content, success: true };
+        }
+      }
+    } catch (error) {
+      console.error('DeepSeek API error:', error);
+    }
+
     return { content: '', success: false };
   }
 
-  private async tryOpenAICompatible(prompt: string): Promise<AIResponse> {
-    // Try free OpenAI-compatible APIs like Together AI, Groq, etc.
+  private async tryOpenAICompatible(prompt: string, type: string): Promise<AIResponse> {
+    // Try free OpenAI-compatible APIs
     const freeAPIs = [
-      'https://api.together.xyz/inference',
-      'https://api.groq.com/openai/v1/chat/completions'
+      {
+        url: 'https://api.groq.com/openai/v1/chat/completions',
+        model: 'mixtral-8x7b-32768',
+        key: import.meta.env.VITE_GROQ_API_KEY
+      },
+      {
+        url: 'https://api.together.xyz/v1/chat/completions',
+        model: 'mistralai/Mixtral-8x7B-Instruct-v0.1',
+        key: import.meta.env.VITE_TOGETHER_API_KEY
+      }
     ];
 
-    for (const apiUrl of freeAPIs) {
+    for (const api of freeAPIs) {
+      if (!api.key) continue;
+      
       try {
-        const response = await fetch(apiUrl, {
+        const response = await fetch(api.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${api.key}`
           },
           body: JSON.stringify({
-            model: 'mixtral-8x7b-32768',
+            model: api.model,
             messages: [
               {
                 role: 'system',
-                content: 'You are a professional business content creator. Create compelling, conversion-focused content.'
+                content: `You are a professional business content creator. Create compelling, conversion-focused ${type} content.`
               },
               {
                 role: 'user',
@@ -427,16 +396,41 @@ Ready to transform your business operations?`
     return { content: '', success: false };
   }
 
-  private async tryLocalModels(prompt: string, type: string): Promise<AIResponse> {
-    // Try browser-based AI models (WebLLM, Transformers.js, etc.)
-    try {
-      // This would use WebAssembly-based models that run in the browser
-      // For now, we'll simulate this with enhanced template generation
-      const enhancedContent = this.generateContextualContent(prompt, type);
-      return { content: enhancedContent, success: true };
-    } catch (error) {
+  private async tryHuggingFace(prompt: string): Promise<AIResponse> {
+    const apiKey = import.meta.env.VITE_HUGGINGFACE_API_KEY;
+    
+    if (!apiKey) {
       return { content: '', success: false };
     }
+
+    try {
+      const response = await fetch('https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: {
+            max_length: 500,
+            temperature: 0.7,
+            do_sample: true
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.generated_text && data.generated_text.length > 50) {
+          return { content: data.generated_text, success: true };
+        }
+      }
+    } catch (error) {
+      console.error('Hugging Face API error:', error);
+    }
+    
+    return { content: '', success: false };
   }
 
   private generateContextualContent(prompt: string, type: string): string {
@@ -451,14 +445,12 @@ Ready to transform your business operations?`
     const platform = this.extractInfo(prompt, 'platform:', 'requirements:');
 
     // Select best template based on context
-    let selectedTemplate = templates[0];
+    let selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
     
     if (promptLower.includes('urgent') || promptLower.includes('limited time')) {
       selectedTemplate = templates[templates.length - 1];
     } else if (promptLower.includes('professional') || promptLower.includes('business')) {
       selectedTemplate = templates[0];
-    } else if (templates.length > 2) {
-      selectedTemplate = templates[1];
     }
 
     // Customize template with extracted information
@@ -524,7 +516,7 @@ Ready to transform your business operations?`
       selectedTemplate = templates[index];
     }
     
-    return selectedTemplate;
+    return this.generateContextualContent(prompt, type);
   }
 }
 

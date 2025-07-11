@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Bell, Shield, CreditCard, Database, Globe, Moon, Sun } from 'lucide-react';
+import { X, User, Bell, Shield, CreditCard, Database, Globe } from 'lucide-react';
 import { TierManager, TIERS } from '../lib/tiers';
 import { database } from '../lib/database';
 import { useTheme } from '../contexts/ThemeContext';
@@ -233,13 +233,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
                 </button>
               </div>
             </div>
-            <div>
-              <h4 className="font-medium text-slate-800 dark:text-white mb-2">Two-Factor Authentication</h4>
-              <p className="text-sm text-slate-600 dark:text-gray-400 mb-4">Add an extra layer of security to your account</p>
-              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                Enable 2FA
-              </button>
-            </div>
           </div>
         );
 
@@ -363,8 +356,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
                 className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="USD">USD ($)</option>
-                <option value="PKR">PKR (₨)</option>
-                <option value="EUR">EUR (€)</option>
               </select>
             </div>
             <div className="flex items-center justify-between">
