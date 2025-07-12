@@ -98,13 +98,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
         )}
-          <button
-            onClick={() => setSidebarOpen && setSidebarOpen(false)}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-slate-500 dark:text-gray-400" />
-          </button>
-        </div>
 
         <div className="p-6">
           <div className="flex items-center space-x-3 mb-8">
