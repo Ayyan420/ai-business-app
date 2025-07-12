@@ -544,7 +544,8 @@ export const database = {
         ...member, 
         id: Date.now().toString(), 
         created_at: new Date().toISOString(),
-        status: 'active'
+        status: 'active',
+        invited_at: new Date().toISOString()
       }
       demoData.team_members.push(newMember)
       return { data: newMember, error: null }
@@ -557,7 +558,12 @@ export const database = {
       console.log('Adding team member:', { ...member, user_id: user.id })
       const { data, error } = await supabase
         .from('team_members')
-        .insert({ ...member, user_id: user.id })
+        .insert({ 
+          ...member, 
+          user_id: user.id,
+          invited_at: new Date().toISOString(),
+          status: member.status || 'active'
+        })
         .select()
         .single()
       
