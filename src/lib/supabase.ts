@@ -55,17 +55,18 @@ export const auth = {
       if (data.user && !error) {
         // Create user profile in our users table
         console.log('👤 Creating user profile in database')
-        const { error: profileError } = await supabase.from('users').insert({
+        const { data: profile, error: profileError } = await supabase.from('users').insert({
           id: data.user.id,
           email: data.user.email,
           name: userData.name,
-          tier: 'free'
-        })
+          tier: 'free',
+          created_at: new Date().toISOString()
+        }).select().single()
         
         if (profileError) {
           console.error('❌ Profile creation error:', profileError)
         } else {
-          console.log('✅ User profile created successfully')
+          console.log('✅ User profile created successfully:', profile)
         }
       }
 
@@ -99,6 +100,27 @@ export const auth = {
       console.log('🔐 Attempting Supabase signin for:', email)
       const result = await supabase.auth.signInWithPassword({ email, password })
       console.log('✅ Signin result:', { success: !!result.data.user, error: result.error?.message })
+      
+      // If signin successful, ensure user profile exists
+      if (result.data.user && !result.error) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', result.data.user.id)
+          .single()
+        
+        if (!profile) {
+          console.log('👤 Creating missing user profile...')
+          await supabase.from('users').insert({
+            id: result.data.user.id,
+            email: result.data.user.email,
+            name: result.data.user.user_metadata?.name || result.data.user.email?.split('@')[0] || 'User',
+            tier: 'free',
+            created_at: new Date().toISOString()
+          })
+        }
+      }
+      
       return result
     } catch (error) {
       console.error('❌ Signin error:', error)

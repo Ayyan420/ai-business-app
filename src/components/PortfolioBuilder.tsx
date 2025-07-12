@@ -73,19 +73,27 @@ const PortfolioBuilder: React.FC<PortfolioBuilderProps> = ({ user }) => {
   const handleSave = async () => {
     setSaving(true);
     
+    if (!user) {
+      alert('Please log in to save your portfolio');
+      setSaving(false);
+      return;
+    }
+    
     const portfolioData = {
       ...portfolio,
-      user_id: user.id,
       slug: portfolio.slug || portfolio.business_name.toLowerCase().replace(/\s+/g, '-')
     };
     
+    console.log('💾 Saving portfolio:', portfolioData);
     const { data, error } = await database.createOrUpdatePortfolio(portfolioData);
     
-    if (!error) {
+    if (!error && data) {
       setPortfolio(data);
+      console.log('✅ Portfolio saved successfully:', data);
       alert('Portfolio saved successfully!');
     } else {
-      alert('Error saving portfolio. Please try again.');
+      console.error('❌ Portfolio save error:', error);
+      alert(`Error saving portfolio: ${error?.message || 'Please try again.'}`);
     }
     
     setSaving(false);

@@ -45,19 +45,63 @@ export const database = {
     }
     
     try {
-      const { data: { user }, error } = await auth.getUser()
-      if (error || !user) return { data: null, error }
+      console.log('🔍 Getting current user...')
+      const { data: { user }, error } = await supabase.auth.getUser()
       
+      if (error) {
+        console.error('❌ Auth error:', error)
+        return { data: null, error }
+      }
+      
+      if (!user) {
+        console.log('⚠️ No authenticated user found')
+        return { data: null, error: 'No user found' }
+      }
+      
+      console.log('✅ User authenticated:', user.id)
+      
+      // Get user profile from database
       const { data: profile, error: profileError } = await supabase
         .from('users')
         .select('*')
         .eq('id', user.id)
         .single()
       
-      console.log('Current user profile:', { profile, profileError })
-      return { data: profile, error: profileError }
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('❌ Profile fetch error:', profileError)
+        return { data: null, error: profileError }
+      }
+      
+      if (!profile) {
+        console.log('📝 Creating new user profile...')
+        // Create user profile if it doesn't exist
+        const newProfile = {
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+          tier: 'free',
+          created_at: new Date().toISOString()
+        }
+        
+        const { data: createdProfile, error: createError } = await supabase
+          .from('users')
+          .insert(newProfile)
+          .select()
+          .single()
+        
+        if (createError) {
+          console.error('❌ Profile creation error:', createError)
+          return { data: null, error: createError }
+        }
+        
+        console.log('✅ User profile created:', createdProfile)
+        return { data: createdProfile, error: null }
+      }
+      
+      console.log('✅ User profile found:', profile)
+      return { data: profile, error: null }
     } catch (error) {
-      console.error('Get current user error:', error)
+      console.error('❌ Get current user error:', error)
       return { data: null, error }
     }
   },
@@ -71,15 +115,23 @@ export const database = {
     }
     
     try {
-      console.log('Updating user profile:', { userId, updates })
-      return await supabase
+      console.log('🔄 Updating user profile:', { userId, updates })
+      const { data, error } = await supabase
         .from('users')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', userId)
         .select()
         .single()
+      
+      if (error) {
+        console.error('❌ Update profile error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Profile updated successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Update user profile error:', error)
+      console.error('❌ Update user profile error:', error)
       return { data: null, error }
     }
   },
@@ -91,19 +143,28 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: [], error: 'Not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for invoices')
+        return { data: [], error: 'Not authenticated' }
+      }
       
+      console.log('📄 Fetching invoices for user:', user.id)
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
-      console.log('Fetched invoices:', { data, error })
-      return { data: data || [], error }
+      if (error) {
+        console.error('❌ Fetch invoices error:', error)
+        return { data: [], error }
+      }
+      
+      console.log('✅ Invoices fetched:', data?.length || 0)
+      return { data: data || [], error: null }
     } catch (error) {
-      console.error('Get invoices error:', error)
+      console.error('❌ Get invoices error:', error)
       return { data: [], error }
     }
   },
@@ -121,62 +182,36 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: null, error: 'User not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for invoice creation')
+        return { data: null, error: 'User not authenticated' }
+      }
       
-      console.log('Creating invoice:', { ...invoice, user_id: user.id })
+      const invoiceData = {
+        ...invoice,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('💾 Creating invoice:', invoiceData)
       const { data, error } = await supabase
         .from('invoices')
-        .insert({ ...invoice, user_id: user.id })
+        .insert(invoiceData)
         .select()
         .single()
       
-      console.log('Invoice creation result:', { data, error })
-      return { data, error }
-    } catch (error) {
-      console.error('Create invoice error:', error)
-      return { data: null, error }
-    }
-  },
-
-  async updateInvoice(id: string, updates: any) {
-    if (isDemoMode) {
-      const index = demoData.invoices.findIndex(inv => inv.id === id)
-      if (index !== -1) {
-        demoData.invoices[index] = { 
-          ...demoData.invoices[index], 
-          ...updates, 
-          updated_at: new Date().toISOString() 
-        }
-        return { data: demoData.invoices[index], error: null }
+      if (error) {
+        console.error('❌ Create invoice error:', error)
+        return { data: null, error }
       }
-      return { data: null, error: 'Invoice not found' }
-    }
-    
-    try {
-      return await supabase
-        .from('invoices')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single()
+      
+      console.log('✅ Invoice created successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Update invoice error:', error)
+      console.error('❌ Create invoice error:', error)
       return { data: null, error }
-    }
-  },
-
-  async deleteInvoice(id: string) {
-    if (isDemoMode) {
-      demoData.invoices = demoData.invoices.filter(inv => inv.id !== id)
-      return { error: null }
-    }
-    
-    try {
-      return await supabase.from('invoices').delete().eq('id', id)
-    } catch (error) {
-      console.error('Delete invoice error:', error)
-      return { error }
     }
   },
 
@@ -187,19 +222,28 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: [], error: 'Not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for campaigns')
+        return { data: [], error: 'Not authenticated' }
+      }
       
+      console.log('📢 Fetching campaigns for user:', user.id)
       const { data, error } = await supabase
         .from('campaigns')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
-      console.log('Fetched campaigns:', { data, error })
-      return { data: data || [], error }
+      if (error) {
+        console.error('❌ Fetch campaigns error:', error)
+        return { data: [], error }
+      }
+      
+      console.log('✅ Campaigns fetched:', data?.length || 0)
+      return { data: data || [], error: null }
     } catch (error) {
-      console.error('Get campaigns error:', error)
+      console.error('❌ Get campaigns error:', error)
       return { data: [], error }
     }
   },
@@ -218,47 +262,36 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: null, error: 'User not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for campaign creation')
+        return { data: null, error: 'User not authenticated' }
+      }
       
-      console.log('Creating campaign:', { ...campaign, user_id: user.id })
+      const campaignData = {
+        ...campaign,
+        user_id: user.id,
+        status: campaign.status || 'draft',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('💾 Creating campaign:', campaignData)
       const { data, error } = await supabase
         .from('campaigns')
-        .insert({ ...campaign, user_id: user.id })
+        .insert(campaignData)
         .select()
         .single()
       
-      console.log('Campaign creation result:', { data, error })
-      return { data, error }
-    } catch (error) {
-      console.error('Create campaign error:', error)
-      return { data: null, error }
-    }
-  },
-
-  async updateCampaign(id: string, updates: any) {
-    if (isDemoMode) {
-      const index = demoData.campaigns.findIndex(camp => camp.id === id)
-      if (index !== -1) {
-        demoData.campaigns[index] = { 
-          ...demoData.campaigns[index], 
-          ...updates, 
-          updated_at: new Date().toISOString() 
-        }
-        return { data: demoData.campaigns[index], error: null }
+      if (error) {
+        console.error('❌ Create campaign error:', error)
+        return { data: null, error }
       }
-      return { data: null, error: 'Campaign not found' }
-    }
-    
-    try {
-      return await supabase
-        .from('campaigns')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single()
+      
+      console.log('✅ Campaign created successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Update campaign error:', error)
+      console.error('❌ Create campaign error:', error)
       return { data: null, error }
     }
   },
@@ -270,19 +303,28 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: [], error: 'Not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for tasks')
+        return { data: [], error: 'Not authenticated' }
+      }
       
+      console.log('📋 Fetching tasks for user:', user.id)
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
-      console.log('Fetched tasks:', { data, error })
-      return { data: data || [], error }
+      if (error) {
+        console.error('❌ Fetch tasks error:', error)
+        return { data: [], error }
+      }
+      
+      console.log('✅ Tasks fetched:', data?.length || 0)
+      return { data: data || [], error: null }
     } catch (error) {
-      console.error('Get tasks error:', error)
+      console.error('❌ Get tasks error:', error)
       return { data: [], error }
     }
   },
@@ -300,20 +342,35 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: null, error: 'User not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for task creation')
+        return { data: null, error: 'User not authenticated' }
+      }
       
-      console.log('Creating task:', { ...task, user_id: user.id })
+      const taskData = {
+        ...task,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('💾 Creating task:', taskData)
       const { data, error } = await supabase
         .from('tasks')
-        .insert({ ...task, user_id: user.id })
+        .insert(taskData)
         .select()
         .single()
       
-      console.log('Task creation result:', { data, error })
-      return { data, error }
+      if (error) {
+        console.error('❌ Create task error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Task created successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Create task error:', error)
+      console.error('❌ Create task error:', error)
       return { data: null, error }
     }
   },
@@ -333,29 +390,24 @@ export const database = {
     }
     
     try {
-      return await supabase
+      console.log('🔄 Updating task:', { id, updates })
+      const { data, error } = await supabase
         .from('tasks')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single()
+      
+      if (error) {
+        console.error('❌ Update task error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Task updated successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Update task error:', error)
+      console.error('❌ Update task error:', error)
       return { data: null, error }
-    }
-  },
-
-  async deleteTask(id: string) {
-    if (isDemoMode) {
-      demoData.tasks = demoData.tasks.filter(task => task.id !== id)
-      return { error: null }
-    }
-    
-    try {
-      return await supabase.from('tasks').delete().eq('id', id)
-    } catch (error) {
-      console.error('Delete task error:', error)
-      return { error }
     }
   },
 
@@ -367,32 +419,22 @@ export const database = {
     }
     
     try {
-      return await supabase
+      console.log('🌐 Fetching portfolio for user:', userId)
+      const { data, error } = await supabase
         .from('portfolios')
         .select('*')
         .eq('user_id', userId)
         .single()
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Get portfolio error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Portfolio fetched:', data ? 'Found' : 'Not found')
+      return { data, error: null }
     } catch (error) {
-      console.error('Get portfolio error:', error)
-      return { data: null, error }
-    }
-  },
-
-  async getPublicPortfolio(slug: string) {
-    if (isDemoMode) {
-      const portfolio = demoData.portfolios.find(p => p.slug === slug && p.is_public)
-      return { data: portfolio, error: null }
-    }
-    
-    try {
-      return await supabase
-        .from('portfolios')
-        .select('*')
-        .eq('slug', slug)
-        .eq('is_public', true)
-        .single()
-    } catch (error) {
-      console.error('Get public portfolio error:', error)
+      console.error('❌ Get portfolio error:', error)
       return { data: null, error }
     }
   },
@@ -417,17 +459,34 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: null, error: 'User not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for portfolio')
+        return { data: null, error: 'User not authenticated' }
+      }
       
-      console.log('Creating/updating portfolio:', { ...portfolioData, user_id: user.id })
-      return await supabase
+      const portfolio = {
+        ...portfolioData,
+        user_id: user.id,
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('💾 Creating/updating portfolio:', portfolio)
+      const { data, error } = await supabase
         .from('portfolios')
-        .upsert({ ...portfolioData, user_id: user.id })
+        .upsert(portfolio, { onConflict: 'user_id' })
         .select()
         .single()
+      
+      if (error) {
+        console.error('❌ Portfolio upsert error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Portfolio saved successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Create/update portfolio error:', error)
+      console.error('❌ Create/update portfolio error:', error)
       return { data: null, error }
     }
   },
@@ -439,19 +498,28 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: [], error: 'Not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for leads')
+        return { data: [], error: 'Not authenticated' }
+      }
       
+      console.log('👥 Fetching leads for user:', user.id)
       const { data, error } = await supabase
         .from('leads')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
-      console.log('Fetched leads:', { data, error })
-      return { data: data || [], error }
+      if (error) {
+        console.error('❌ Fetch leads error:', error)
+        return { data: [], error }
+      }
+      
+      console.log('✅ Leads fetched:', data?.length || 0)
+      return { data: data || [], error: null }
     } catch (error) {
-      console.error('Get leads error:', error)
+      console.error('❌ Get leads error:', error)
       return { data: [], error }
     }
   },
@@ -469,20 +537,36 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: null, error: 'User not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for lead creation')
+        return { data: null, error: 'User not authenticated' }
+      }
       
-      console.log('Creating lead:', { ...lead, user_id: user.id })
+      const leadData = {
+        ...lead,
+        user_id: user.id,
+        status: lead.status || 'new',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('💾 Creating lead:', leadData)
       const { data, error } = await supabase
         .from('leads')
-        .insert({ ...lead, user_id: user.id })
+        .insert(leadData)
         .select()
         .single()
       
-      console.log('Lead creation result:', { data, error })
-      return { data, error }
+      if (error) {
+        console.error('❌ Create lead error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Lead created successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Create lead error:', error)
+      console.error('❌ Create lead error:', error)
       return { data: null, error }
     }
   },
@@ -502,14 +586,23 @@ export const database = {
     }
     
     try {
-      return await supabase
+      console.log('🔄 Updating lead:', { id, updates })
+      const { data, error } = await supabase
         .from('leads')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single()
+      
+      if (error) {
+        console.error('❌ Update lead error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Lead updated successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Update lead error:', error)
+      console.error('❌ Update lead error:', error)
       return { data: null, error }
     }
   },
@@ -521,19 +614,28 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: [], error: 'Not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for team members')
+        return { data: [], error: 'Not authenticated' }
+      }
       
+      console.log('👨‍💼 Fetching team members for user:', user.id)
       const { data, error } = await supabase
         .from('team_members')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
-      console.log('Fetched team members:', { data, error })
-      return { data: data || [], error }
+      if (error) {
+        console.error('❌ Fetch team members error:', error)
+        return { data: [], error }
+      }
+      
+      console.log('✅ Team members fetched:', data?.length || 0)
+      return { data: data || [], error: null }
     } catch (error) {
-      console.error('Get team members error:', error)
+      console.error('❌ Get team members error:', error)
       return { data: [], error }
     }
   },
@@ -552,25 +654,37 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: null, error: 'User not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for team member creation')
+        return { data: null, error: 'User not authenticated' }
+      }
       
-      console.log('Adding team member:', { ...member, user_id: user.id })
+      const memberData = {
+        ...member,
+        user_id: user.id,
+        status: member.status || 'active',
+        invited_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('💾 Adding team member:', memberData)
       const { data, error } = await supabase
         .from('team_members')
-        .insert({ 
-          ...member, 
-          user_id: user.id,
-          invited_at: new Date().toISOString(),
-          status: member.status || 'active'
-        })
+        .insert(memberData)
         .select()
         .single()
       
-      console.log('Team member creation result:', { data, error })
-      return { data, error }
+      if (error) {
+        console.error('❌ Add team member error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Team member added successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Add team member error:', error)
+      console.error('❌ Add team member error:', error)
       return { data: null, error }
     }
   },
@@ -582,19 +696,28 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: [], error: 'Not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for payments')
+        return { data: [], error: 'Not authenticated' }
+      }
       
+      console.log('💳 Fetching payments for user:', user.id)
       const { data, error } = await supabase
         .from('payments')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
-      console.log('Fetched payments:', { data, error })
-      return { data: data || [], error }
+      if (error) {
+        console.error('❌ Fetch payments error:', error)
+        return { data: [], error }
+      }
+      
+      console.log('✅ Payments fetched:', data?.length || 0)
+      return { data: data || [], error: null }
     } catch (error) {
-      console.error('Get payments error:', error)
+      console.error('❌ Get payments error:', error)
       return { data: [], error }
     }
   },
@@ -611,89 +734,34 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: null, error: 'User not authenticated' }
-      
-      console.log('Creating payment:', { ...payment, user_id: user.id })
-      const { data, error } = await supabase
-        .from('payments')
-        .insert({ ...payment, user_id: user.id })
-        .select()
-        .single()
-      
-      console.log('Payment creation result:', { data, error })
-      return { data, error }
-    } catch (error) {
-      console.error('Create payment error:', error)
-      return { data: null, error }
-    }
-  },
-
-  // Admin functions
-  async getAllUsers() {
-    if (isDemoMode) {
-      return { data: [JSON.parse(localStorage.getItem('demoUser') || '{}')], error: null }
-    }
-    
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false })
-      
-      console.log('Fetched all users:', { data, error })
-      return { data: data || [], error }
-    } catch (error) {
-      console.error('Get all users error:', error)
-      return { data: [], error }
-    }
-  },
-
-  async getAllPayments() {
-    if (isDemoMode) {
-      return { data: demoData.payments, error: null }
-    }
-    
-    try {
-      const { data, error } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          users (
-            name,
-            email
-          )
-        `)
-        .order('created_at', { ascending: false })
-      
-      console.log('Fetched all payments:', { data, error })
-      return { data: data || [], error }
-    } catch (error) {
-      console.error('Get all payments error:', error)
-      return { data: [], error }
-    }
-  },
-
-  async updatePaymentStatus(paymentId: string, status: string) {
-    if (isDemoMode) {
-      const index = demoData.payments.findIndex(p => p.id === paymentId)
-      if (index !== -1) {
-        demoData.payments[index].status = status
-        return { data: demoData.payments[index], error: null }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for payment creation')
+        return { data: null, error: 'User not authenticated' }
       }
-      return { data: null, error: 'Payment not found' }
-    }
-    
-    try {
-      console.log('Updating payment status:', { paymentId, status })
-      return await supabase
+      
+      const paymentData = {
+        ...payment,
+        user_id: user.id,
+        created_at: new Date().toISOString()
+      }
+      
+      console.log('💾 Creating payment:', paymentData)
+      const { data, error } = await supabase
         .from('payments')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', paymentId)
+        .insert(paymentData)
         .select()
         .single()
+      
+      if (error) {
+        console.error('❌ Create payment error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Payment created successfully:', data)
+      return { data, error: null }
     } catch (error) {
-      console.error('Update payment status error:', error)
+      console.error('❌ Create payment error:', error)
       return { data: null, error }
     }
   },
@@ -722,8 +790,13 @@ export const database = {
     }
     
     try {
-      const { data: { user } } = await auth.getUser()
-      if (!user) return { data: null, error: 'Not authenticated' }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('❌ No authenticated user for stats')
+        return { data: null, error: 'Not authenticated' }
+      }
+      
+      console.log('📊 Calculating stats for user:', user.id)
       
       // Get all data for stats calculation
       const [invoicesResult, campaignsResult, tasksResult, leadsResult, teamResult] = await Promise.all([
@@ -734,22 +807,111 @@ export const database = {
         this.getTeamMembers(user.id)
       ])
       
-      const totalRevenue = invoicesResult.data?.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0) || 0
+      const totalRevenue = invoicesResult.data?.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0
       const completedTasks = tasksResult.data?.filter(task => task.status === 'completed').length || 0
       const activeCampaigns = campaignsResult.data?.filter(camp => camp.status === 'active').length || 0
       
-      return {
-        data: {
-          revenue: totalRevenue,
-          campaigns: activeCampaigns,
-          tasks: completedTasks,
-          leads: leadsResult.data?.length || 0,
-          team_members: teamResult.data?.length || 0
-        },
-        error: null
+      const stats = {
+        revenue: totalRevenue,
+        campaigns: activeCampaigns,
+        tasks: completedTasks,
+        leads: leadsResult.data?.length || 0,
+        team_members: teamResult.data?.length || 0
       }
+      
+      console.log('✅ Stats calculated:', stats)
+      return { data: stats, error: null }
     } catch (error) {
-      console.error('Get stats error:', error)
+      console.error('❌ Get stats error:', error)
+      return { data: null, error }
+    }
+  },
+
+  // Admin functions
+  async getAllUsers() {
+    if (isDemoMode) {
+      return { data: [JSON.parse(localStorage.getItem('demoUser') || '{}')], error: null }
+    }
+    
+    try {
+      console.log('👥 Fetching all users (admin)')
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) {
+        console.error('❌ Get all users error:', error)
+        return { data: [], error }
+      }
+      
+      console.log('✅ All users fetched:', data?.length || 0)
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('❌ Get all users error:', error)
+      return { data: [], error }
+    }
+  },
+
+  async getAllPayments() {
+    if (isDemoMode) {
+      return { data: demoData.payments, error: null }
+    }
+    
+    try {
+      console.log('💳 Fetching all payments (admin)')
+      const { data, error } = await supabase
+        .from('payments')
+        .select(`
+          *,
+          users (
+            name,
+            email
+          )
+        `)
+        .order('created_at', { ascending: false })
+      
+      if (error) {
+        console.error('❌ Get all payments error:', error)
+        return { data: [], error }
+      }
+      
+      console.log('✅ All payments fetched:', data?.length || 0)
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('❌ Get all payments error:', error)
+      return { data: [], error }
+    }
+  },
+
+  async updatePaymentStatus(paymentId: string, status: string) {
+    if (isDemoMode) {
+      const index = demoData.payments.findIndex(p => p.id === paymentId)
+      if (index !== -1) {
+        demoData.payments[index].status = status
+        return { data: demoData.payments[index], error: null }
+      }
+      return { data: null, error: 'Payment not found' }
+    }
+    
+    try {
+      console.log('🔄 Updating payment status:', { paymentId, status })
+      const { data, error } = await supabase
+        .from('payments')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', paymentId)
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('❌ Update payment status error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Payment status updated:', data)
+      return { data, error: null }
+    } catch (error) {
+      console.error('❌ Update payment status error:', error)
       return { data: null, error }
     }
   }

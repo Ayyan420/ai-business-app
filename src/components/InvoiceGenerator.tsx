@@ -227,9 +227,9 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
       status: 'draft'
     };
 
+    console.log('💾 Saving invoice:', invoiceToSave);
     onSave(invoiceToSave);
     TierManager.updateUsage('invoices');
-    alert('Invoice saved successfully!');
   };
 
   const InvoicePreview = () => (
