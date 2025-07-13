@@ -9,7 +9,8 @@ import {
   ArrowUpRight,
   Calendar,
   FileText,
-  Zap
+  Zap,
+  Calculator
 } from 'lucide-react';
 import { database } from '../lib/database';
 import UsageDashboard from './UsageDashboard';
