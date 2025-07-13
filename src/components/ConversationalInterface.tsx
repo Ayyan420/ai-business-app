@@ -47,9 +47,16 @@ const ConversationalInterface: React.FC<ConversationalInterfaceProps> = ({ onClo
 
     // Check tier limits
     if (!TierManager.canUseFeature('aiQueries')) {
-      alert('You\'ve reached your AI query limit. Please upgrade to continue.');
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: '⚠️ You\'ve reached your AI query limit for this month. Please upgrade your plan to continue using the AI assistant.',
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorResponse]);
       return;
     }
+    
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputMessage,
@@ -162,11 +169,80 @@ Would you like me to help you create a task management system?`;
 • Scale operations without hiring
 
 This platform already includes many AI tools - have you tried our content generator or invoice automation?`;
+      } else if (input.includes('accounting') || input.includes('expense') || input.includes('finance')) {
+        aiResponse = `Let me help you with accounting and financial management:
+
+💰 **Essential accounting practices:**
+• Track all income and expenses daily
+• Categorize transactions properly
+• Keep digital receipts organized
+• Reconcile accounts monthly
+• Prepare for tax season year-round
+
+📊 **Key financial metrics to monitor:**
+• Cash flow (money in vs money out)
+• Profit margins by product/service
+• Monthly recurring revenue
+• Customer acquisition cost
+• Average transaction value
+
+🔧 **Tools that can help:**
+• Use our AI Accounting Tools for expense tracking
+• Generate financial reports automatically
+• Get AI insights on spending patterns
+• Calculate tax obligations
+
+Would you like me to help you set up a financial tracking system?`;
+      } else if (input.includes('post') || input.includes('social media') || input.includes('content')) {
+        aiResponse = `Perfect! Let's create engaging social media content:
+
+📱 **Social media best practices:**
+• Know your audience and platform
+• Post consistently with a content calendar
+• Use high-quality visuals and videos
+• Engage with your community regularly
+• Track performance and adjust strategy
+
+✨ **Content ideas that work:**
+• Behind-the-scenes content
+• Educational tips and tutorials
+• Customer success stories
+• Industry news and insights
+• Interactive polls and questions
+
+🎯 **Platform-specific tips:**
+• Instagram: Visual storytelling, hashtags
+• LinkedIn: Professional insights, networking
+• Twitter: Real-time updates, conversations
+• Facebook: Community building, longer posts
+
+Try our AI Post Maker to generate engaging content for any platform!`;
       } else {
-        aiResponse = await deepseekAI.generateContent(
+        try {
+          aiResponse = await deepseekAI.generateContent(
           `You are an AI Business Assistant. The user asked: "${inputMessage}". Provide helpful, actionable business advice.`,
           'general'
-        );
+          );
+        } catch (error) {
+          console.error('AI API error:', error);
+          aiResponse = `I understand you're asking about "${inputMessage}". Here's some general business advice:
+
+🎯 **Key business principles:**
+• Focus on solving real customer problems
+• Build strong relationships with clients
+• Continuously improve your products/services
+• Monitor your finances closely
+• Invest in marketing and growth
+
+💡 **Quick tips:**
+• Set clear, measurable goals
+• Track your progress regularly
+• Stay updated with industry trends
+• Network with other professionals
+• Always prioritize customer satisfaction
+
+For more specific help, try using our specialized tools for marketing, finance, or operations!`;
+        }
       }
       
       setIsTyping(false);
@@ -181,10 +257,11 @@ This platform already includes many AI tools - have you tried our content genera
       setMessages(prev => [...prev, response]);
       TierManager.updateUsage('aiQueries');
     } catch (error) {
+      console.error('Chat error:', error);
       setIsTyping(false);
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: 'I apologize, but I encountered an error. Please try again or contact support if the issue persists.',
+        content: 'I apologize, but I encountered an error processing your request. Please try again or rephrase your question.',
         sender: 'ai',
         timestamp: new Date()
       };

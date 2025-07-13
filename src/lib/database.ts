@@ -33,7 +33,7 @@ let demoData = {
   portfolios: [],
   leads: [],
   payments: [],
-  team_members: []
+  posts: []
 }
 
 export const database = {
@@ -607,84 +607,81 @@ export const database = {
     }
   },
 
-  // Team Management
-  async getTeamMembers(userId?: string) {
+  // Posts
+  async getPosts(userId?: string) {
     if (isDemoMode) {
-      return { data: demoData.team_members, error: null }
+      return { data: demoData.posts, error: null }
     }
     
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.error('❌ No authenticated user for team members')
+        console.error('❌ No authenticated user for posts')
         return { data: [], error: 'Not authenticated' }
       }
       
-      console.log('👨‍💼 Fetching team members for user:', user.id)
+      console.log('📝 Fetching posts for user:', user.id)
       const { data, error } = await supabase
-        .from('team_members')
+        .from('posts')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
       if (error) {
-        console.error('❌ Fetch team members error:', error)
+        console.error('❌ Fetch posts error:', error)
         return { data: [], error }
       }
       
-      console.log('✅ Team members fetched:', data?.length || 0)
+      console.log('✅ Posts fetched:', data?.length || 0)
       return { data: data || [], error: null }
     } catch (error) {
-      console.error('❌ Get team members error:', error)
+      console.error('❌ Get posts error:', error)
       return { data: [], error }
     }
   },
 
-  async addTeamMember(member: any) {
+  async createPost(post: any) {
     if (isDemoMode) {
-      const newMember = { 
-        ...member, 
+      const newPost = { 
+        ...post, 
         id: Date.now().toString(), 
         created_at: new Date().toISOString(),
-        status: 'active',
-        invited_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       }
-      demoData.team_members.push(newMember)
-      return { data: newMember, error: null }
+      demoData.posts.push(newPost)
+      return { data: newPost, error: null }
     }
     
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.error('❌ No authenticated user for team member creation')
+        console.error('❌ No authenticated user for post creation')
         return { data: null, error: 'User not authenticated' }
       }
       
-      const memberData = {
-        ...member,
+      const postData = {
+        ...post,
         user_id: user.id,
-        status: member.status || 'active',
-        invited_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
       
-      console.log('💾 Adding team member:', memberData)
+      console.log('💾 Creating post:', postData)
       const { data, error } = await supabase
-        .from('team_members')
-        .insert(memberData)
+        .from('posts')
+        .insert(postData)
         .select()
         .single()
       
       if (error) {
-        console.error('❌ Add team member error:', error)
+        console.error('❌ Create post error:', error)
         return { data: null, error }
       }
       
-      console.log('✅ Team member added successfully:', data)
+      console.log('✅ Post created successfully:', data)
       return { data, error: null }
     } catch (error) {
-      console.error('❌ Add team member error:', error)
+      console.error('❌ Create post error:', error)
       return { data: null, error }
     }
   },

@@ -14,6 +14,8 @@ import {
   Globe,
   Users,
   UserCheck,
+  FileText,
+  Calculator,
   Moon,
   Sun,
   Menu,
@@ -49,12 +51,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'marketing', label: 'Marketing', icon: TrendingUp },
+    { id: 'posts', label: 'Post Maker', icon: FileText },
     { id: 'finance', label: 'Finance', icon: DollarSign },
+    { id: 'accounting', label: 'Accounting', icon: Calculator },
     { id: 'strategy', label: 'Strategy', icon: Target },
     { id: 'operations', label: 'Operations', icon: BarChart3 },
     { id: 'portfolio', label: 'Portfolio', icon: Globe },
     { id: 'crm', label: 'CRM & Leads', icon: Users },
-    { id: 'team', label: 'Team', icon: UserCheck },
   ];
 
   const handleMenuClick = (sectionId: string) => {

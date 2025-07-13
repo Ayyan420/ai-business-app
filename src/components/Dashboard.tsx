@@ -140,17 +140,17 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveSection, user }) => {
       color: 'bg-green-500'
     },
     { 
-      title: 'Strategic Planning', 
-      description: 'Develop growth strategies',
-      icon: Target,
-      action: () => setActiveSection('strategy'),
+      title: 'Create Social Posts', 
+      description: 'AI-powered social media content',
+      icon: FileText,
+      action: () => setActiveSection('posts'),
       color: 'bg-purple-500'
     },
     { 
-      title: 'Process Optimization', 
-      description: 'Streamline operations',
-      icon: Zap,
-      action: () => setActiveSection('operations'),
+      title: 'Track Expenses', 
+      description: 'AI accounting insights',
+      icon: Calculator,
+      action: () => setActiveSection('accounting'),
       color: 'bg-orange-500'
     },
   ];

@@ -12,7 +12,8 @@ import ConversationalInterface from './components/ConversationalInterface';
 import SettingsModal from './components/SettingsModal';
 import PortfolioBuilder from './components/PortfolioBuilder';
 import CRMDashboard from './components/CRMDashboard';
-import TeamManagement from './components/TeamManagement';
+import PostMaker from './components/PostMaker';
+import AccountingTools from './components/AccountingTools';
 import { database } from './lib/database';
 import { emailService, auth, isDemoMode } from './lib/supabase';
 import { Menu } from 'lucide-react';
@@ -135,8 +136,10 @@ function App() {
         return <PortfolioBuilder user={user} />;
       case 'crm':
         return <CRMDashboard />;
-      case 'team':
-        return <TeamManagement user={user} />;
+      case 'posts':
+        return <PostMaker />;
+      case 'accounting':
+        return <AccountingTools />;
       default:
         return <Dashboard setActiveSection={setActiveSection} user={user} />;
     }

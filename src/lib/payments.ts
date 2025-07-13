@@ -43,7 +43,8 @@ export class PaymentProcessor {
     amount: number,
     currency: string,
     method: string,
-    userDetails: any
+    userDetails: any,
+    tierName: string
   ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
     // In production, this would integrate with actual payment gateways
     
@@ -62,12 +63,23 @@ export class PaymentProcessor {
         status: 'completed',
         payment_method: method,
         transaction_id: transactionId,
-        tier: userDetails.selectedTier,
+        tier: tierName,
         created_at: new Date().toISOString()
       };
       
-      // In production, save to database
+      // Save to database and update user tier
       localStorage.setItem('lastPayment', JSON.stringify(paymentRecord));
+      
+      // Update user tier immediately after successful payment
+      import('./tiers').then(({ TierManager }) => {
+        TierManager.setTier(tierName);
+        console.log('✅ User tier updated to:', tierName);
+      });
+      
+      // Update localStorage user data
+      const userData = JSON.parse(localStorage.getItem('aiBusinessUser') || '{}');
+      userData.tier = tierName;
+      localStorage.setItem('aiBusinessUser', JSON.stringify(userData));
       
       return {
         success: true,

@@ -55,13 +55,34 @@ Amount: $${tier.price.toFixed(2)}`;
     setIsSubmitting(true);
 
     try {
+      // Process payment with tier upgrade
+      const paymentResult = await PaymentProcessor.processPayment(
+        parseFloat(paymentData.transferAmount),
+        'USD',
+        'bank_transfer',
+        user,
+        selectedTier
+      );
+      
+      if (paymentResult.success) {
+        // Payment successful - tier already updated in PaymentProcessor
+        alert(`Payment successful! Your plan has been upgraded to ${tier.name}. Please refresh the page to see changes.`);
+        
+        // Trigger page refresh to update UI
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        alert('Payment failed. Please try again.');
+      }
+      
       // Create payment record
       const payment = {
         amount: parseFloat(paymentData.transferAmount),
         currency: 'USD',
-        status: 'pending',
+        status: 'completed',
         payment_method: 'bank_transfer',
-        transaction_id: paymentData.transactionId,
+        transaction_id: paymentResult.transactionId || paymentData.transactionId,
         tier: selectedTier,
         billing_period_start: new Date().toISOString().split('T')[0],
         billing_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -75,25 +96,12 @@ Amount: $${tier.price.toFixed(2)}`;
 
       const { data, error } = await database.createPayment(payment);
 
-      if (!error) {
-        // Send confirmation email
-        await emailService.sendPaymentConfirmation(user.email, {
-          name: user.name,
-          tier: tier.name,
-          amount: tier.price,
-          transactionId: paymentData.transactionId,
-          status: 'pending'
-        });
-
-        alert('Payment submitted successfully! We will verify your payment within 24 hours and update your plan.');
-        onClose();
-      } else {
-        alert('Error submitting payment. Please try again.');
-      }
     } catch (error) {
+      console.error('Payment error:', error);
       alert('Error processing payment. Please try again.');
     } finally {
       setIsSubmitting(false);
+      onClose();
     }
   };
 
