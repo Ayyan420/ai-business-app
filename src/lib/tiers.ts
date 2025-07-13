@@ -1,4 +1,4 @@
-// Tier management system for free and paid plans
+// Updated tier management system with new pricing
 export interface TierLimits {
   contentGenerations: number;
   invoices: number;
@@ -53,7 +53,7 @@ export const TIERS: Record<string, UserTier> = {
       'Basic team features'
     ]
   },
-  pro: {
+  professional: {
     name: 'Professional',
     price: 5, // $5 USD
     limits: {
@@ -85,6 +85,7 @@ export class TierManager {
 
   static setTier(tier: string) {
     localStorage.setItem('userTier', tier);
+    console.log('🎯 Tier updated to:', tier);
   }
 
   static getUsage(): Record<string, number> {
@@ -103,6 +104,7 @@ export class TierManager {
     const usage = this.getUsage();
     usage[type] = (usage[type] || 0) + increment;
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(usage));
+    console.log(`📊 Usage updated: ${type} = ${usage[type]}`);
   }
 
   static canUseFeature(type: keyof TierLimits): boolean {
@@ -113,7 +115,9 @@ export class TierManager {
     // -1 means unlimited
     if (tierLimits[type] === -1) return true;
     
-    return (usage[type] || 0) < tierLimits[type];
+    const canUse = (usage[type] || 0) < tierLimits[type];
+    console.log(`🔒 Feature check: ${type} - ${canUse ? 'ALLOWED' : 'BLOCKED'} (${usage[type] || 0}/${tierLimits[type]})`);
+    return canUse;
   }
 
   static getRemainingUsage(type: keyof TierLimits): number {
@@ -129,5 +133,6 @@ export class TierManager {
   static resetMonthlyUsage() {
     // This would typically be called by a cron job or when a new month starts
     localStorage.removeItem(this.STORAGE_KEY);
+    console.log('🔄 Monthly usage reset');
   }
 }

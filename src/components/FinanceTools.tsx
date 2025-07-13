@@ -51,9 +51,15 @@ const FinanceTools: React.FC = () => {
   };
 
   const handleSaveInvoice = async (invoice: any) => {
+    console.log('💾 Saving invoice to database:', invoice);
     const { data, error } = await database.createInvoice(invoice);
+    console.log('📊 Invoice save result:', { data, error });
     if (!error && data) {
       setSavedInvoices(prev => [data, ...prev]);
+      console.log('✅ Invoice saved successfully');
+      alert('Invoice saved successfully!');
+      console.error('❌ Failed to save invoice:', error);
+      alert(`Failed to save invoice: ${error?.message || 'Please try again.'}`);
     }
   };
 

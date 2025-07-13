@@ -26,12 +26,16 @@ const AdminPanel: React.FC = () => {
 
   const loadAdminData = async () => {
     setLoading(true);
+    console.log('👑 Loading admin data...');
     
     try {
       const [usersResult, paymentsResult] = await Promise.all([
         database.getAllUsers(),
         database.getAllPayments()
       ]);
+      
+      console.log('👥 Users loaded:', usersResult.data?.length || 0);
+      console.log('💳 Payments loaded:', paymentsResult.data?.length || 0);
       
       if (usersResult.data) {
         setUsers(usersResult.data);
@@ -41,7 +45,7 @@ const AdminPanel: React.FC = () => {
         setPayments(paymentsResult.data);
       }
     } catch (error) {
-      console.error('Admin data loading error:', error);
+      console.error('❌ Admin data loading error:', error);
     } finally {
       setLoading(false);
     }
@@ -49,6 +53,8 @@ const AdminPanel: React.FC = () => {
 
   const handleApprovePayment = async (paymentId: string, userId: string, tier: string) => {
     try {
+      console.log('✅ Approving payment:', { paymentId, userId, tier });
+      
       // Update payment status
       await database.updatePaymentStatus(paymentId, 'completed');
       
@@ -60,18 +66,19 @@ const AdminPanel: React.FC = () => {
       
       alert('Payment approved and user tier updated successfully!');
     } catch (error) {
-      console.error('Payment approval error:', error);
+      console.error('❌ Payment approval error:', error);
       alert('Error approving payment. Please try again.');
     }
   };
 
   const handleRejectPayment = async (paymentId: string) => {
     try {
+      console.log('❌ Rejecting payment:', paymentId);
       await database.updatePaymentStatus(paymentId, 'failed');
       loadAdminData();
       alert('Payment rejected successfully!');
     } catch (error) {
-      console.error('Payment rejection error:', error);
+      console.error('❌ Payment rejection error:', error);
       alert('Error rejecting payment. Please try again.');
     }
   };

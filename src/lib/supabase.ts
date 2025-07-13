@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase configuration
+// Supabase configuration with proper error handling
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
@@ -17,22 +17,23 @@ export const supabase = hasValidSupabaseConfig
 // Check if we're in demo mode (no real Supabase connection)
 export const isDemoMode = !hasValidSupabaseConfig
 
-console.log('Supabase Config:', { 
+console.log('🔗 Supabase Configuration:', { 
   hasValidConfig: hasValidSupabaseConfig, 
   isDemoMode, 
-  url: supabaseUrl ? 'Set' : 'Missing',
+  url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'Missing',
   key: supabaseAnonKey ? 'Set' : 'Missing'
 })
 
-// Authentication helpers
+// Enhanced authentication helpers with proper error handling
 export const auth = {
   async signUp(email: string, password: string, userData: any) {
     if (isDemoMode || !supabase) {
-      console.log('Demo mode: Simulating signup')
+      console.log('📱 Demo mode: Simulating signup')
       const user = {
         id: `demo-${Date.now()}`,
         email,
         ...userData,
+        tier: 'free',
         created_at: new Date().toISOString()
       }
       localStorage.setItem('demoUser', JSON.stringify(user))
@@ -40,7 +41,7 @@ export const auth = {
     }
 
     try {
-      console.log('Attempting Supabase signup for:', email)
+      console.log('🔐 Attempting Supabase signup for:', email)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -49,35 +50,36 @@ export const auth = {
         }
       })
 
-      console.log('Signup result:', { data, error })
+      console.log('✅ Signup result:', { success: !!data.user, error: error?.message })
 
       if (data.user && !error) {
         // Create user profile in our users table
-        console.log('Creating user profile in database')
-        const { error: profileError } = await supabase.from('users').insert({
+        console.log('👤 Creating user profile in database')
+        const { data: profile, error: profileError } = await supabase.from('users').insert({
           id: data.user.id,
           email: data.user.email,
           name: userData.name,
-          tier: 'free'
-        })
+          tier: 'free',
+          created_at: new Date().toISOString()
+        }).select().single()
         
         if (profileError) {
-          console.error('Profile creation error:', profileError)
+          console.error('❌ Profile creation error:', profileError)
         } else {
-          console.log('User profile created successfully')
+          console.log('✅ User profile created successfully:', profile)
         }
       }
 
       return { data, error }
     } catch (error) {
-      console.error('Signup error:', error)
+      console.error('❌ Signup error:', error)
       return { data: null, error: error as any }
     }
   },
 
   async signIn(email: string, password: string) {
     if (isDemoMode || !supabase) {
-      console.log('Demo mode: Simulating signin')
+      console.log('📱 Demo mode: Simulating signin')
       const demoUser = localStorage.getItem('demoUser')
       if (demoUser) {
         return { data: { user: JSON.parse(demoUser) }, error: null }
@@ -95,12 +97,33 @@ export const auth = {
     }
 
     try {
-      console.log('Attempting Supabase signin for:', email)
+      console.log('🔐 Attempting Supabase signin for:', email)
       const result = await supabase.auth.signInWithPassword({ email, password })
-      console.log('Signin result:', result)
+      console.log('✅ Signin result:', { success: !!result.data.user, error: result.error?.message })
+      
+      // If signin successful, ensure user profile exists
+      if (result.data.user && !result.error) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', result.data.user.id)
+          .single()
+        
+        if (!profile) {
+          console.log('👤 Creating missing user profile...')
+          await supabase.from('users').insert({
+            id: result.data.user.id,
+            email: result.data.user.email,
+            name: result.data.user.user_metadata?.name || result.data.user.email?.split('@')[0] || 'User',
+            tier: 'free',
+            created_at: new Date().toISOString()
+          })
+        }
+      }
+      
       return result
     } catch (error) {
-      console.error('Signin error:', error)
+      console.error('❌ Signin error:', error)
       return { data: null, error: error as any }
     }
   },
@@ -133,12 +156,12 @@ export const auth = {
 // Email service
 export const emailService = {
   async sendWelcomeEmail(userEmail: string, userName: string) {
-    console.log(`Welcome email would be sent to ${userEmail}`)
+    console.log(`📧 Welcome email would be sent to ${userEmail}`)
     return { success: true }
   },
 
   async sendPaymentConfirmation(userEmail: string, paymentData: any) {
-    console.log(`Payment confirmation would be sent to ${userEmail}`)
+    console.log(`💳 Payment confirmation would be sent to ${userEmail}`)
     return { success: true }
   }
 }
@@ -186,7 +209,7 @@ export const dbFunctions = {
     }
     
     try {
-      console.log('Updating user tier:', { userId, newTier })
+      console.log('🔄 Updating user tier:', { userId, newTier })
       return await supabase
         .from('users')
         .update({ tier: newTier, updated_at: new Date().toISOString() })
@@ -194,7 +217,7 @@ export const dbFunctions = {
         .select()
         .single()
     } catch (error) {
-      console.error('Update tier error:', error)
+      console.error('❌ Update tier error:', error)
       return { data: null, error: error as any }
     }
   },
@@ -212,7 +235,7 @@ export const dbFunctions = {
         .eq('id', userId)
         .single()
     } catch (error) {
-      console.error('Get profile error:', error)
+      console.error('❌ Get profile error:', error)
       return { data: null, error: error as any }
     }
   },
@@ -233,7 +256,7 @@ export const dbFunctions = {
         .select()
         .single()
     } catch (error) {
-      console.error('Update profile error:', error)
+      console.error('❌ Update profile error:', error)
       return { data: null, error: error as any }
     }
   }

@@ -252,27 +252,48 @@ Would you like me to elaborate on any of these recommendations or help you creat
   };
 
   async generateContent(prompt: string, type: string = 'general'): Promise<string> {
+    console.log('🤖 AI Content Generation Started:', { type, promptLength: prompt.length });
+    
     try {
       // Try to use real AI APIs first
       const response = await this.tryRealAI(prompt, type);
       if (response.success) {
+        console.log('✅ Real AI API response received');
         return response.content;
       }
     } catch (error) {
-      console.log('Real AI APIs unavailable, using intelligent templates');
+      console.log('⚠️ Real AI APIs unavailable, using intelligent templates');
     }
 
     // Fallback to enhanced intelligent templates
-    return this.generateIntelligentTemplate(prompt, type);
+    const templateContent = this.generateIntelligentTemplate(prompt, type);
+    console.log('✅ Template-based content generated');
+    return templateContent;
   }
 
   private async tryRealAI(prompt: string, type: string): Promise<AIResponse> {
-    // Try OpenAI-compatible free APIs
+    // Try DeepSeek API first
     try {
-      const response = await this.tryOpenAICompatible(prompt, type);
-      if (response.success) return response;
+      const deepseekResponse = await this.tryDeepSeekAPI(prompt, type);
+      if (deepseekResponse.success) return deepseekResponse;
     } catch (error) {
-      console.log('OpenAI-compatible APIs failed, trying next...');
+      console.log('🔄 DeepSeek API failed, trying next...');
+    }
+
+    // Try Groq API
+    try {
+      const groqResponse = await this.tryGroqAPI(prompt, type);
+      if (groqResponse.success) return groqResponse;
+    } catch (error) {
+      console.log('🔄 Groq API failed, trying next...');
+    }
+
+    // Try Together AI
+    try {
+      const togetherResponse = await this.tryTogetherAPI(prompt, type);
+      if (togetherResponse.success) return togetherResponse;
+    } catch (error) {
+      console.log('🔄 Together AI failed, trying next...');
     }
 
     // Try Hugging Face Inference API (free tier)
@@ -280,30 +301,22 @@ Would you like me to elaborate on any of these recommendations or help you creat
       const hfResponse = await this.tryHuggingFace(prompt);
       if (hfResponse.success) return hfResponse;
     } catch (error) {
-      console.log('Hugging Face API failed, trying next...');
-    }
-
-    // Try DeepSeek API if available
-    try {
-      const deepseekResponse = await this.tryDeepSeekAPI(prompt, type);
-      if (deepseekResponse.success) return deepseekResponse;
-    } catch (error) {
-      console.log('DeepSeek API failed, using templates...');
+      console.log('🔄 Hugging Face API failed, using templates...');
     }
 
     return { content: '', success: false };
   }
 
   private async tryDeepSeekAPI(prompt: string, type: string): Promise<AIResponse> {
-    // This would use DeepSeek API if you have an API key
-    // For now, we'll use a mock implementation
     const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
     
     if (!apiKey) {
+      console.log('🔑 DeepSeek API key not found');
       return { content: '', success: false };
     }
 
     try {
+      console.log('🚀 Trying DeepSeek API...');
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -330,67 +343,106 @@ Would you like me to elaborate on any of these recommendations or help you creat
       if (response.ok) {
         const data = await response.json();
         if (data.choices && data.choices[0]?.message?.content) {
+          console.log('✅ DeepSeek API success');
           return { content: data.choices[0].message.content, success: true };
         }
       }
     } catch (error) {
-      console.error('DeepSeek API error:', error);
+      console.error('❌ DeepSeek API error:', error);
     }
 
     return { content: '', success: false };
   }
 
-  private async tryOpenAICompatible(prompt: string, type: string): Promise<AIResponse> {
-    // Try free OpenAI-compatible APIs
-    const freeAPIs = [
-      {
-        url: 'https://api.groq.com/openai/v1/chat/completions',
-        model: 'mixtral-8x7b-32768',
-        key: import.meta.env.VITE_GROQ_API_KEY
-      },
-      {
-        url: 'https://api.together.xyz/v1/chat/completions',
-        model: 'mistralai/Mixtral-8x7B-Instruct-v0.1',
-        key: import.meta.env.VITE_TOGETHER_API_KEY
-      }
-    ];
+  private async tryGroqAPI(prompt: string, type: string): Promise<AIResponse> {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    
+    if (!apiKey) {
+      console.log('🔑 Groq API key not found');
+      return { content: '', success: false };
+    }
 
-    for (const api of freeAPIs) {
-      if (!api.key) continue;
-      
-      try {
-        const response = await fetch(api.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${api.key}`
-          },
-          body: JSON.stringify({
-            model: api.model,
-            messages: [
-              {
-                role: 'system',
-                content: `You are a professional business content creator. Create compelling, conversion-focused ${type} content.`
-              },
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            max_tokens: 500,
-            temperature: 0.7
-          })
-        });
+    try {
+      console.log('🚀 Trying Groq API...');
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'mixtral-8x7b-32768',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a professional business content creator. Create compelling, conversion-focused ${type} content.`
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.7
+        })
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.choices && data.choices[0]?.message?.content) {
-            return { content: data.choices[0].message.content, success: true };
-          }
+      if (response.ok) {
+        const data = await response.json();
+        if (data.choices && data.choices[0]?.message?.content) {
+          console.log('✅ Groq API success');
+          return { content: data.choices[0].message.content, success: true };
         }
-      } catch (error) {
-        continue; // Try next API
       }
+    } catch (error) {
+      console.error('❌ Groq API error:', error);
+    }
+
+    return { content: '', success: false };
+  }
+
+  private async tryTogetherAPI(prompt: string, type: string): Promise<AIResponse> {
+    const apiKey = import.meta.env.VITE_TOGETHER_API_KEY;
+    
+    if (!apiKey) {
+      console.log('🔑 Together API key not found');
+      return { content: '', success: false };
+    }
+
+    try {
+      console.log('🚀 Trying Together AI...');
+      const response = await fetch('https://api.together.xyz/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'mistralai/Mixtral-8x7B-Instruct-v0.1',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a professional business content creator. Create compelling, conversion-focused ${type} content.`
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.7
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.choices && data.choices[0]?.message?.content) {
+          console.log('✅ Together AI success');
+          return { content: data.choices[0].message.content, success: true };
+        }
+      }
+    } catch (error) {
+      console.error('❌ Together AI error:', error);
     }
 
     return { content: '', success: false };
@@ -400,10 +452,12 @@ Would you like me to elaborate on any of these recommendations or help you creat
     const apiKey = import.meta.env.VITE_HUGGINGFACE_API_KEY;
     
     if (!apiKey) {
+      console.log('🔑 Hugging Face API key not found');
       return { content: '', success: false };
     }
 
     try {
+      console.log('🚀 Trying Hugging Face API...');
       const response = await fetch('https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium', {
         method: 'POST',
         headers: {
@@ -423,69 +477,15 @@ Would you like me to elaborate on any of these recommendations or help you creat
       if (response.ok) {
         const data = await response.json();
         if (data.generated_text && data.generated_text.length > 50) {
+          console.log('✅ Hugging Face API success');
           return { content: data.generated_text, success: true };
         }
       }
     } catch (error) {
-      console.error('Hugging Face API error:', error);
+      console.error('❌ Hugging Face API error:', error);
     }
     
     return { content: '', success: false };
-  }
-
-  private generateContextualContent(prompt: string, type: string): string {
-    const promptLower = prompt.toLowerCase();
-    const templates = this.fallbackTemplates[type as keyof typeof this.fallbackTemplates] || this.fallbackTemplates.general;
-    
-    // Extract key information from prompt
-    const targetAudience = this.extractInfo(prompt, 'target audience:', 'product/service:');
-    const product = this.extractInfo(prompt, 'product/service:', 'key benefits:');
-    const benefits = this.extractInfo(prompt, 'key benefits:', 'tone:');
-    const tone = this.extractInfo(prompt, 'tone:', 'platform:');
-    const platform = this.extractInfo(prompt, 'platform:', 'requirements:');
-
-    // Select best template based on context
-    let selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
-    
-    if (promptLower.includes('urgent') || promptLower.includes('limited time')) {
-      selectedTemplate = templates[templates.length - 1];
-    } else if (promptLower.includes('professional') || promptLower.includes('business')) {
-      selectedTemplate = templates[0];
-    }
-
-    // Customize template with extracted information
-    let customizedContent = selectedTemplate;
-    
-    if (targetAudience) {
-      customizedContent = customizedContent.replace(/\[target audience\]/gi, targetAudience);
-      customizedContent = customizedContent.replace(/business owners/gi, targetAudience);
-    }
-    
-    if (product) {
-      customizedContent = customizedContent.replace(/\[product\]/gi, product);
-      customizedContent = customizedContent.replace(/AI platform/gi, product);
-    }
-    
-    if (platform && platform.includes('social')) {
-      // Add more hashtags for social media
-      customizedContent += '\n\n#Business #Success #Growth #Innovation #Technology';
-    }
-
-    return customizedContent;
-  }
-
-  private extractInfo(text: string, startMarker: string, endMarker: string): string {
-    const startIndex = text.toLowerCase().indexOf(startMarker.toLowerCase());
-    if (startIndex === -1) return '';
-    
-    const contentStart = startIndex + startMarker.length;
-    const endIndex = text.toLowerCase().indexOf(endMarker.toLowerCase(), contentStart);
-    
-    if (endIndex === -1) {
-      return text.substring(contentStart).trim();
-    }
-    
-    return text.substring(contentStart, endIndex).trim();
   }
 
   private generateIntelligentTemplate(prompt: string, type: string): string {
@@ -516,7 +516,42 @@ Would you like me to elaborate on any of these recommendations or help you creat
       selectedTemplate = templates[index];
     }
     
-    return this.generateContextualContent(prompt, type);
+    return this.customizeTemplate(selectedTemplate, prompt);
+  }
+
+  private customizeTemplate(template: string, prompt: string): string {
+    // Extract key information from prompt
+    const targetAudience = this.extractInfo(prompt, 'target audience:', 'product');
+    const product = this.extractInfo(prompt, 'product:', 'benefits');
+    const benefits = this.extractInfo(prompt, 'benefits:', 'tone');
+    
+    let customized = template;
+    
+    if (targetAudience) {
+      customized = customized.replace(/business owners/gi, targetAudience);
+      customized = customized.replace(/entrepreneurs/gi, targetAudience);
+    }
+    
+    if (product) {
+      customized = customized.replace(/AI platform/gi, product);
+      customized = customized.replace(/our platform/gi, product);
+    }
+    
+    return customized;
+  }
+
+  private extractInfo(text: string, startMarker: string, endMarker: string): string {
+    const startIndex = text.toLowerCase().indexOf(startMarker.toLowerCase());
+    if (startIndex === -1) return '';
+    
+    const contentStart = startIndex + startMarker.length;
+    const endIndex = text.toLowerCase().indexOf(endMarker.toLowerCase(), contentStart);
+    
+    if (endIndex === -1) {
+      return text.substring(contentStart).trim();
+    }
+    
+    return text.substring(contentStart, endIndex).trim();
   }
 }
 

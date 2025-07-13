@@ -75,10 +75,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Mobile Overlay */}
-      {sidebarOpen && (
+      {sidebarOpen && setSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setSidebarOpen && setSidebarOpen(false)}
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
@@ -88,14 +88,16 @@ const Sidebar: React.FC<SidebarProps> = ({
       } lg:translate-x-0`}>
         
         {/* Mobile Close Button */}
-        <div className="lg:hidden flex justify-end p-4">
-          <button
-            onClick={() => setSidebarOpen && setSidebarOpen(false)}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-slate-500 dark:text-gray-400" />
-          </button>
-        </div>
+        {setSidebarOpen && (
+          <div className="lg:hidden flex justify-end p-4">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-slate-500 dark:text-gray-400" />
+            </button>
+          </div>
+        )}
 
         <div className="p-6">
           <div className="flex items-center space-x-3 mb-8">
@@ -173,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
         
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="bottom-0 left-0 right-0 p-6 border-t border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <button
             onClick={() => setShowChat(true)}
             className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-2"

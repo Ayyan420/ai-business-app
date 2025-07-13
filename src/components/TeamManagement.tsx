@@ -36,10 +36,22 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ user }) => {
   };
 
   const handleAddMember = async (memberData: any) => {
+    if (!memberData.name || !memberData.email) {
+      alert('Please fill in name and email fields');
+      return;
+    }
+    
+    console.log('🔄 Adding team member to database:', memberData);
     const { data, error } = await database.addTeamMember(memberData);
+    console.log('📊 Team member creation result:', { data, error });
     if (!error && data) {
       setTeamMembers(prev => [...prev, data]);
       setShowAddModal(false);
+      console.log('✅ Team member added successfully');
+      alert('Team member added successfully!');
+    } else {
+      console.error('❌ Failed to add team member:', error);
+      alert(`Failed to add team member: ${error?.message || 'Please try again.'}`);
     }
   };
 

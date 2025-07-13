@@ -38,10 +38,22 @@ const CRMDashboard: React.FC = () => {
   };
 
   const handleAddLead = async (leadData: any) => {
+    if (!leadData.name || !leadData.email) {
+      alert('Please fill in name and email fields');
+      return;
+    }
+    
+    console.log('🔄 Adding lead to database:', leadData);
     const { data, error } = await database.createLead(leadData);
+    console.log('📊 Lead creation result:', { data, error });
     if (!error && data) {
       setLeads(prev => [data, ...prev]);
       setShowAddModal(false);
+      console.log('✅ Lead added successfully');
+      alert('Lead added successfully!');
+    } else {
+      console.error('❌ Failed to add lead:', error);
+      alert(`Failed to add lead: ${error?.message || 'Please try again.'}`);
     }
   };
 

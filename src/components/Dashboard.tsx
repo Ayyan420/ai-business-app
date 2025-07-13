@@ -35,13 +35,16 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveSection, user }) => {
 
   const loadDashboardData = async () => {
     setLoading(true);
+    console.log('📊 Loading dashboard data for user:', user?.id);
     
     try {
       // Load real-time stats
       const statsResult = await database.getStats(user?.id);
+      console.log('📈 Stats result:', statsResult);
       
       if (statsResult.data) {
         const data = statsResult.data;
+        console.log('📊 Dashboard stats:', data);
         setStats([
           { 
             label: 'Monthly Revenue', 
@@ -59,7 +62,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveSection, user }) => {
           },
           { 
             label: 'Team Members', 
-            value: data.team_members.toString(), 
+            value: (data.team_members || 1).toString(), 
             change: '+0', 
             icon: Users, 
             color: 'text-purple-600' 
