@@ -11,6 +11,7 @@ import {
   Calendar,
   TrendingUp
 } from 'lucide-react';
+import { database } from '../lib/database';
 
 interface Notification {
   id: string;
@@ -25,48 +26,72 @@ interface Notification {
   };
 }
 
-const NotificationSystem: React.FC = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'success',
-      title: 'Payment Received',
-      message: 'Payment of $99.99 for Pro plan has been confirmed.',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000),
-      read: false
-    },
-    {
-      id: '2',
-      type: 'warning',
-      title: 'Usage Limit Warning',
-      message: 'You have used 90% of your monthly content generation limit.',
-      timestamp: new Date(Date.now() - 30 * 60 * 1000),
-      read: false
-    },
-    {
-      id: '3',
-      type: 'info',
-      title: 'New Team Member',
-      message: 'Sarah Johnson has joined your team.',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      read: true
-    },
-    {
-      id: '4',
-      type: 'error',
-      title: 'Payment Failed',
-      message: 'Your payment method was declined. Please update your billing information.',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      read: false,
-      action: {
-        label: 'Update Payment',
-        onClick: () => console.log('Update payment clicked')
-      }
-    }
-  ]);
+interface NotificationSystemProps {
+  user?: any;
+}
+
+const NotificationSystem: React.FC<NotificationSystemProps> = ({ user }) => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [showNotifications, setShowNotifications] = useState(false);
 
+  useEffect(() => {
+    loadNotifications();
+  }, [user]);
+
+  const loadNotifications = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // In a real app, this would fetch from database
+      // For now, we'll create dynamic notifications based on user activity
+      const mockNotifications: Notification[] = [
+        {
+          id: '1',
+          type: 'success',
+          title: 'Welcome to AI Business Assistant!',
+          message: 'Your account has been set up successfully. Start exploring our AI-powered tools.',
+          timestamp: new Date(Date.now() - 5 * 60 * 1000),
+          read: false
+        },
+        {
+          id: '2',
+          type: 'info',
+          title: 'Portfolio Builder Available',
+          message: 'Create your professional portfolio to showcase your work.',
+          timestamp: new Date(Date.now() - 30 * 60 * 1000),
+          read: false
+        }
+      ];
+
+      setNotifications(mockNotifications);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp'>) => {
+    const newNotification: Notification = {
+      ...notification,
+      id: Date.now().toString(),
+      timestamp: new Date()
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  };
+
+  // Expose method to add notifications globally
+  useEffect(() => {
+    (window as any).addNotification = addNotification;
+    return () => {
+      delete (window as any).addNotification;
+    };
+  }, []);
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAsRead = (id: string) => {

@@ -245,14 +245,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Notification System Status</h4>
               <p className="text-blue-700 dark:text-blue-400 text-sm">
-                ✅ Notifications are working! You'll receive alerts for important events like payments, usage limits, and system updates.
+                ✅ In-app notifications are working! You'll see real-time alerts in the notification bell icon for important events like payments, usage limits, and system updates.
               </p>
+            </div>
+            
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <h4 className="font-semibold text-green-800 dark:text-green-300 mb-2">Test Notification</h4>
+              <p className="text-green-700 dark:text-green-400 text-sm mb-3">
+                Click the button below to test the notification system.
+              </p>
+              <button
+                onClick={() => {
+                  if ((window as any).addNotification) {
+                    (window as any).addNotification({
+                      type: 'success',
+                      title: 'Test Notification',
+                      message: 'This is a test notification to verify the system is working!',
+                      read: false
+                    });
+                    alert('Test notification sent! Check the notification bell icon.');
+                  }
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              >
+                Send Test Notification
+              </button>
             </div>
             
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-slate-800 dark:text-white">Email Notifications</h4>
-                <p className="text-sm text-slate-600 dark:text-gray-400">Receive updates about your account</p>
+                <h4 className="font-medium text-slate-800 dark:text-white">In-App Notifications</h4>
+                <p className="text-sm text-slate-600 dark:text-gray-400">Show notifications in the app interface</p>
               </div>
               <input
                 type="checkbox"
@@ -263,8 +286,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-slate-800 dark:text-white">Marketing Updates</h4>
-                <p className="text-sm text-slate-600 dark:text-gray-400">Get tips and product updates</p>
+                <h4 className="font-medium text-slate-800 dark:text-white">System Alerts</h4>
+                <p className="text-sm text-slate-600 dark:text-gray-400">Important system and account alerts</p>
               </div>
               <input
                 type="checkbox"

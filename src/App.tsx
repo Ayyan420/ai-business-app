@@ -192,12 +192,17 @@ function App() {
     localStorage.setItem('aiBusinessUser', JSON.stringify(userData));
     setCurrentPage('dashboard');
     
-    // Send welcome email
-    try {
-      await emailService.sendWelcomeEmail(userData.email, userData.name);
-    } catch (error) {
-      console.error('Welcome email error:', error);
-    }
+    // Add welcome notification
+    setTimeout(() => {
+      if ((window as any).addNotification) {
+        (window as any).addNotification({
+          type: 'success',
+          title: 'Welcome to AI Business Assistant!',
+          message: 'Your account is ready. Start exploring our powerful AI tools.',
+          read: false
+        });
+      }
+    }, 1000);
   };
 
   const handleLogout = async () => {

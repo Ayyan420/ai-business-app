@@ -123,7 +123,7 @@ const PortfolioBuilder: React.FC<PortfolioBuilderProps> = ({ user }) => {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
-      .substring(0, 50) + '-' + Math.random().toString(36).substr(2, 6);
+      .substring(0, 30) + '-' + Date.now().toString(36);
   };
 
   const handleSave = async () => {
@@ -134,6 +134,9 @@ const PortfolioBuilder: React.FC<PortfolioBuilderProps> = ({ user }) => {
       if (!portfolio.slug) {
         portfolio.slug = generateSlug(portfolio.business_name || user.name || user.email);
       }
+      
+      // Ensure user_id is set
+      portfolio.user_id = user.id;
       
       const { data, error } = await database.createOrUpdatePortfolio(portfolio);
       

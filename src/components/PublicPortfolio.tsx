@@ -42,28 +42,13 @@ const PublicPortfolio: React.FC<PublicPortfolioProps> = ({ slug }) => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeSection, setActiveSection] = useState('about');
-  const [isVisible, setIsVisible] = useState(false);
-  const [contactForm, setContactForm] = useState({
-    name: '',
+            projects_completed: portfolio.portfolio_items?.length || 0,
+            clients_served: Math.floor((portfolio.portfolio_items?.length || 0) * 1.5) + 2,
+            years_experience: Math.max(1, Math.floor((portfolio.portfolio_items?.length || 0) / 2) + 1),
     email: '',
     message: ''
-  });
-
-  useEffect(() => {
-    loadPortfolio(slug);
-    setIsVisible(true);
-  }, [slug]);
-
-  const loadPortfolio = async (portfolioSlug: string) => {
-    setLoading(true);
-    
-    try {
-      console.log('🔍 Loading portfolio with slug:', portfolioSlug);
-      const { data, error } = await database.getPortfolioBySlug(portfolioSlug);
-      
-      if (error || !data) {
-        console.error('❌ Portfolio not found:', error);
-        setPortfolio(null);
+          tools: portfolio.tools || [],
+          testimonials: portfolio.testimonials || []
         setLoading(false);
         return;
       }

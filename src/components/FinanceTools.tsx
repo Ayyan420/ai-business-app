@@ -20,14 +20,6 @@ const FinanceTools: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState('invoice');
   const [savedInvoices, setSavedInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [taxSettings, setTaxSettings] = useState({
-    defaultRate: 10,
-    customRates: [
-      { name: 'GST', rate: 17 },
-      { name: 'Sales Tax', rate: 16 },
-      { name: 'Service Tax', rate: 5 }
-    ]
-  });
   const [budgetData, setBudgetData] = useState({
     totalBudget: 10000,
     categories: [

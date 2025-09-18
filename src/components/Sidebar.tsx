@@ -1,4 +1,5 @@
 import React from 'react';
+import NotificationSystem from './NotificationSystem';
 import { 
   BarChart3, 
   Brain, 
@@ -204,6 +205,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </button>
           
           <div className="flex space-x-2 mb-2">
+            <NotificationSystem user={user} />
             <button 
               onClick={handleSettingsClick}
               className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg transition-colors"

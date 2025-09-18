@@ -473,14 +473,21 @@ export const database = {
 
   async getPortfolioBySlug(slug: string) {
     if (isDemoMode) {
+      // Load from localStorage if available
+      const savedPortfolios = localStorage.getItem('demoPortfolios');
+      if (savedPortfolios) {
+        demoData.portfolios = JSON.parse(savedPortfolios);
+      }
+      
       // For demo mode, create a sample portfolio if none exists
       let portfolio = demoData.portfolios.find(p => p.slug === slug);
       
       if (!portfolio && slug) {
-        // Create a demo portfolio for any slug
+        // Only create demo portfolio for demo-specific slugs
+        if (slug.includes('demo') || slug.includes('sample')) {
         portfolio = {
           id: 'demo-portfolio',
-          user_id: slug.includes('demo') ? 'demo-user' : `user-${slug}`,
+          user_id: 'demo-user',
           business_name: 'Demo Business',
           tagline: 'Innovative Solutions for Modern Challenges',
           description: 'We are a forward-thinking company dedicated to providing cutting-edge solutions that help businesses thrive in today\'s competitive landscape. Our team of experts combines creativity with technical expertise to deliver exceptional results.',
@@ -539,6 +546,7 @@ export const database = {
         
         // Add to demo data
         demoData.portfolios.push(portfolio);
+        }
       }
       
       if (portfolio) {
@@ -568,9 +576,9 @@ export const database = {
             }
           ]
         }
-        return { data: enhancedPortfolio, error: null }
+        return { data: enhancedPortfolio, error: null };
       }
-      return { data: null, error: 'Portfolio not found' }
+      return { data: null, error: 'Portfolio not found' };
     }
     
     try {
@@ -624,22 +632,24 @@ export const database = {
 
   async createOrUpdatePortfolio(portfolioData: any) {
     if (isDemoMode) {
-      const existingIndex = demoData.portfolios.findIndex(p => p.user_id === portfolioData.user_id)
+      const existingIndex = demoData.portfolios.findIndex(p => p.user_id === portfolioData.user_id);
       const portfolio = {
         ...portfolioData,
         id: existingIndex >= 0 ? demoData.portfolios[existingIndex].id : Date.now().toString(),
         updated_at: new Date().toISOString(),
-        unique_id: portfolioData.unique_id || `portfolio-${portfolioData.user_id || 'demo'}-${Date.now()}`
-      }
+        created_at: existingIndex >= 0 ? demoData.portfolios[existingIndex].created_at : new Date().toISOString()
+      };
       
       if (existingIndex >= 0) {
-        demoData.portfolios[existingIndex] = portfolio
+        demoData.portfolios[existingIndex] = portfolio;
       } else {
-        portfolio.created_at = new Date().toISOString()
-        demoData.portfolios.push(portfolio)
+        demoData.portfolios.push(portfolio);
       }
       
-      return { data: portfolio, error: null }
+      // Save to localStorage for persistence
+      localStorage.setItem('demoPortfolios', JSON.stringify(demoData.portfolios));
+      
+      return { data: portfolio, error: null };
     }
     
     try {

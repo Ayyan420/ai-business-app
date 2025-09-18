@@ -79,7 +79,7 @@ Provide:
       const brandKit = {
         colors: colors,
         fonts: generateFontRecommendations(brandData.brandPersonality),
-        logoIdeas: generateLogoIdeas(brandData.businessName, brandData.industry),
+        logoIdeas: generateLogoSuggestions(brandData.businessName, brandData.industry, brandData.brandPersonality),
         brandVoice: aiResponse,
         visualStyle: generateVisualStyle(brandData.brandPersonality, brandData.industry)
       };
@@ -150,6 +150,46 @@ Provide:
     };
   };
 
+  const generateLogoSuggestions = (businessName: string, industry: string, personality: string) => {
+    const logoStyles = {
+      professional: ['Clean wordmark', 'Geometric icon', 'Monogram with serif font'],
+      creative: ['Abstract symbol', 'Hand-drawn illustration', 'Artistic typography'],
+      friendly: ['Rounded icon', 'Mascot character', 'Playful wordmark'],
+      bold: ['Strong typography', 'Angular shapes', 'High contrast design'],
+      minimalist: ['Simple wordmark', 'Single letter mark', 'Clean line art'],
+      playful: ['Cartoon character', 'Colorful badge', 'Fun typography']
+    };
+
+    const industryIcons = {
+      'Technology': ['Circuit patterns', 'Digital elements', 'Abstract tech symbols'],
+      'Healthcare': ['Medical cross', 'Heart symbol', 'Wellness icons'],
+      'Finance': ['Dollar sign', 'Growth arrows', 'Stability symbols'],
+      'Education': ['Book icons', 'Graduation cap', 'Learning symbols'],
+      'Retail': ['Shopping elements', 'Product icons', 'Commerce symbols'],
+      'Food & Beverage': ['Food icons', 'Chef elements', 'Dining symbols']
+    };
+
+    const styles = logoStyles[personality as keyof typeof logoStyles] || logoStyles.professional;
+    const icons = industryIcons[industry as keyof typeof industryIcons] || ['Custom symbol', 'Brand mark', 'Icon design'];
+
+    return [
+      {
+        type: 'Wordmark',
+        description: `${businessName} in ${styles[0]} style`,
+        elements: ['Typography-focused', 'Clean letterforms', 'Professional spacing']
+      },
+      {
+        type: 'Icon + Text',
+        description: `Combination logo with ${icons[0]} and business name`,
+        elements: ['Scalable icon', 'Balanced composition', 'Versatile usage']
+      },
+      {
+        type: 'Symbol/Icon',
+        description: `Standalone ${icons[1]} representing your brand`,
+        elements: ['Memorable symbol', 'Works at small sizes', 'Strong recognition']
+      }
+    ];
+  };
   const extractColorsFromText = (text: string): string[] => {
     const colorMap: Record<string, string> = {
       'blue': '#3B82F6',
@@ -539,12 +579,19 @@ Provide:
 
               {/* Logo Ideas */}
               <div>
-                <h3 className="font-semibold text-slate-800 dark:text-white mb-3">Logo Concepts</h3>
+                <h3 className="font-semibold text-slate-800 dark:text-white mb-3">Logo Suggestions</h3>
                 <div className="space-y-2">
-                  {generatedBrand.logoIdeas.map((idea: any, index: number) => (
+                  {generatedBrand.logoIdeas.map((logo: any, index: number) => (
                     <div key={index} className="p-3 bg-slate-50 dark:bg-gray-700 rounded-lg">
-                      <h4 className="font-medium text-slate-800 dark:text-white">{idea.concept}</h4>
-                      <p className="text-sm text-slate-600 dark:text-gray-400">{idea.description}</p>
+                      <h4 className="font-medium text-slate-800 dark:text-white">{logo.type}</h4>
+                      <p className="text-sm text-slate-600 dark:text-gray-400 mb-2">{logo.description}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {logo.elements.map((element: string, elemIndex: number) => (
+                          <span key={elemIndex} className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded">
+                            {element}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
