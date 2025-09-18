@@ -94,6 +94,16 @@ Amount: $${tier.price.toFixed(2)}`;
         await dbFunctions.updateUserTier(user.id, selectedTier);
         TierManager.setTier(selectedTier);
         
+        // Add success notification
+        if ((window as any).addNotification) {
+          (window as any).addNotification({
+            type: 'success',
+            title: 'Payment Successful!',
+            message: `Your plan has been upgraded to ${tier.name}. Enjoy unlimited access!`,
+            read: false
+          });
+        }
+        
         console.log('✅ Payment processed and tier updated successfully')
         alert(`Payment submitted successfully! Your plan has been upgraded to ${tier.name}.`);
         window.location.reload();
