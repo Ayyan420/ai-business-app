@@ -37,6 +37,14 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveSection, user }) => {
 
   const loadDashboardData = async () => {
     setLoading(true);
+    
+    // Check if user is authenticated before making database calls
+    if (!user || !user.id) {
+      console.log('⚠️ No authenticated user, skipping dashboard data load');
+      setLoading(false);
+      return;
+    }
+    
     console.log('📊 Loading dashboard data for user:', user?.id);
     
     try {
