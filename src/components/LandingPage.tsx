@@ -17,7 +17,16 @@ import {
   Rocket,
   Award,
   Play,
-  ChevronDown
+  ChevronDown,
+  Mail,
+  Phone,
+  MapPin,
+  Send,
+  Heart,
+  Code,
+  Palette,
+  Coffee,
+  Lightbulb
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -27,6 +36,11 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    email: '',
+    message: ''
+  });
 
   useEffect(() => {
     setIsVisible(true);
@@ -104,63 +118,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
     }
   ];
 
-  const pricingPlans = [
-    {
-      name: 'Free',
-      price: '$0',
-      period: '/month',
-      description: 'Perfect for getting started',
-      features: [
-        '5 Content Generations',
-        '2 Invoices',
-        '1 Campaign',
-        '10 Tasks',
-        'Email Support'
-      ],
-      popular: false,
-      color: 'border-gray-200'
-    },
-    {
-      name: 'Starter',
-      price: '$2',
-      period: '/month',
-      description: 'Ideal for small businesses',
-      features: [
-        '50 Content Generations',
-        '25 Invoices',
-        '10 Campaigns',
-        '100 Tasks',
-        'Priority Support',
-        'Basic Team Features'
-      ],
-      popular: true,
-      color: 'border-blue-500'
-    },
-    {
-      name: 'Professional',
-      price: '$5',
-      period: '/month',
-      description: 'For growing businesses',
-      features: [
-        'Unlimited Everything',
-        'Advanced Analytics',
-        'Team Collaboration',
-        'Custom Branding',
-        'Portfolio Builder',
-        'CRM & Lead Management',
-        '24/7 Support'
-      ],
-      popular: false,
-      color: 'border-purple-500'
-    }
-  ];
-
   const stats = [
     { number: '50,000+', label: 'Active Users', delay: 'delay-100' },
     { number: '1M+', label: 'Content Generated', delay: 'delay-200' },
     { number: '99.9%', label: 'Uptime', delay: 'delay-300' },
     { number: '24/7', label: 'Support', delay: 'delay-400' }
   ];
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, this would send the message
+    alert('Thank you for your message! We\'ll get back to you soon.');
+    setContactForm({ name: '', email: '', message: '' });
+  };
 
   return (
     <div className="min-h-screen bg-white overflow-hidden">
@@ -179,14 +149,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">Features</a>
-              <a href="#pricing" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">Pricing</a>
-              <a href="#testimonials" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">Reviews</a>
+              <a href="#home" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">Home</a>
+              <a href="#about" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">About Us</a>
+              <a href="#contact" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">Contact</a>
               <button
                 onClick={onGetStarted}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
               >
-                Get Started Free
+                Get Started
               </button>
             </div>
           </div>
@@ -194,7 +164,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20 overflow-hidden">
+      <section id="home" className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20 overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
@@ -257,7 +227,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
 
         {/* Scroll Indicator */}
-        <div className="bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
           <ChevronDown className="w-6 h-6 text-slate-400" />
         </div>
       </section>
@@ -278,31 +248,85 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-20 bg-gradient-to-r from-slate-50 to-blue-50">
+      {/* About Us Section */}
+      <section id="about" className="py-24 bg-gradient-to-r from-slate-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-800 mb-4">Why Choose Our AI Assistant?</h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">Join thousands of businesses already transforming their operations with intelligent automation</p>
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-800 mb-6">About Our Mission</h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              We're passionate about empowering businesses with cutting-edge AI technology that makes complex tasks simple and efficient.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {benefits.map((benefit, index) => {
-              const IconComponent = benefit.icon;
-              return (
-                <div key={index} className={`group flex items-center space-x-4 p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300 animate-slide-up ${benefit.delay}`}>
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <IconComponent className="w-6 h-6 text-white" />
-                  </div>
-                  <p className="text-slate-700 font-medium flex-1">{benefit.text}</p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
+            <div className="space-y-6">
+              <h3 className="text-3xl font-bold text-slate-800">Transforming Business Operations</h3>
+              <p className="text-lg text-slate-600 leading-relaxed">
+                Founded by a team of AI experts and business professionals, we understand the challenges modern businesses face. 
+                Our platform combines the power of artificial intelligence with intuitive design to create solutions that actually work.
+              </p>
+              <p className="text-lg text-slate-600 leading-relaxed">
+                From startups to enterprises, we've helped thousands of businesses automate their workflows, 
+                increase productivity, and achieve sustainable growth through intelligent automation.
+              </p>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                  <div className="text-2xl font-bold text-blue-600 mb-2">5+</div>
+                  <div className="text-sm text-slate-600">Years Experience</div>
                 </div>
-              );
-            })}
+                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                  <div className="text-2xl font-bold text-green-600 mb-2">98%</div>
+                  <div className="text-sm text-slate-600">Customer Satisfaction</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="p-6 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 transform hover:scale-105 transition-transform duration-300">
+                  <Code className="w-8 h-8 text-blue-600 mb-4" />
+                  <h4 className="font-semibold text-slate-800 mb-2">Innovation</h4>
+                  <p className="text-slate-600 text-sm">Cutting-edge AI technology</p>
+                </div>
+                <div className="p-6 rounded-xl bg-gradient-to-br from-green-100 to-green-200 transform hover:scale-105 transition-transform duration-300">
+                  <Heart className="w-8 h-8 text-green-600 mb-4" />
+                  <h4 className="font-semibold text-slate-800 mb-2">Passion</h4>
+                  <p className="text-slate-600 text-sm">Dedicated to your success</p>
+                </div>
+              </div>
+              <div className="space-y-4 mt-8">
+                <div className="p-6 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200 transform hover:scale-105 transition-transform duration-300">
+                  <Lightbulb className="w-8 h-8 text-purple-600 mb-4" />
+                  <h4 className="font-semibold text-slate-800 mb-2">Vision</h4>
+                  <p className="text-slate-600 text-sm">Future-focused solutions</p>
+                </div>
+                <div className="p-6 rounded-xl bg-gradient-to-br from-orange-100 to-orange-200 transform hover:scale-105 transition-transform duration-300">
+                  <Coffee className="w-8 h-8 text-orange-600 mb-4" />
+                  <h4 className="font-semibold text-slate-800 mb-2">Support</h4>
+                  <p className="text-slate-600 text-sm">Always here to help</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Team Values */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { title: 'Customer First', description: 'Every decision we make is centered around delivering value to our customers.' },
+              { title: 'Innovation', description: 'We continuously push the boundaries of what\'s possible with AI technology.' },
+              { title: 'Transparency', description: 'We believe in honest communication and transparent business practices.' }
+            ].map((value, index) => (
+              <div key={index} className="text-center p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-lg transition-shadow duration-300">
+                <h4 className="text-xl font-bold text-slate-800 mb-3">{value.title}</h4>
+                <p className="text-slate-600">{value.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 bg-white">
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-5xl font-bold text-slate-800 mb-6">Powerful Features for Every Business Need</h2>
@@ -330,7 +354,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </section>
 
       {/* Testimonials Section */}
-      <section id="testimonials" className="py-24 bg-gradient-to-br from-blue-50 to-purple-50">
+      <section className="py-24 bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-slate-800 mb-6">Trusted by Industry Leaders</h2>
@@ -377,56 +401,114 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 bg-white">
+      {/* Contact Section */}
+      <section id="contact" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-bold text-slate-800 mb-6">Simple, Affordable Pricing</h2>
-            <p className="text-xl text-slate-600">Choose the plan that fits your business needs</p>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-800 mb-6">Get In Touch</h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {pricingPlans.map((plan, index) => (
-              <div key={index} className={`relative p-8 rounded-2xl border-2 ${plan.color} ${
-                plan.popular 
-                  ? 'bg-gradient-to-br from-blue-50 to-purple-50 shadow-xl scale-105' 
-                  : 'bg-white shadow-lg hover:shadow-xl'
-              } transition-all duration-300 hover:scale-105`}>
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-bold flex items-center space-x-2">
-                      <Award className="w-4 h-4" />
-                      <span>Most Popular</span>
-                    </span>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Contact Info */}
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-800 mb-6">Contact Information</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Mail className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">Email</p>
+                      <p className="text-slate-600">support@aibusinessassistant.com</p>
+                    </div>
                   </div>
-                )}
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-slate-800 mb-2">{plan.name}</h3>
-                  <p className="text-slate-600 mb-6">{plan.description}</p>
-                  <div className="flex items-baseline justify-center mb-2">
-                    <span className="text-5xl font-bold text-slate-800">{plan.price}</span>
-                    <span className="text-slate-600 ml-2 text-lg">{plan.period}</span>
+                  
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Phone className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">Phone</p>
+                      <p className="text-slate-600">+1 (555) 123-4567</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <MapPin className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">Address</p>
+                      <p className="text-slate-600">123 Business Ave, Tech City, TC 12345</p>
+                    </div>
                   </div>
                 </div>
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center space-x-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-slate-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={onGetStarted}
-                  className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${
-                    plan.popular
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl'
-                      : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-                  }`}
-                >
-                  Get Started
-                </button>
               </div>
-            ))}
+              
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+                <h4 className="font-semibold text-blue-800 mb-2">Business Hours</h4>
+                <div className="space-y-1 text-blue-700">
+                  <p>Monday - Friday: 9:00 AM - 6:00 PM</p>
+                  <p>Saturday: 10:00 AM - 4:00 PM</p>
+                  <p>Sunday: Closed</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Contact Form */}
+            <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-8 border border-slate-200 shadow-lg">
+              <h3 className="text-2xl font-bold text-slate-800 mb-6">Send us a Message</h3>
+              
+              <form onSubmit={handleContactSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Name</label>
+                  <input
+                    type="text"
+                    value={contactForm.name}
+                    onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Your full name"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="your@email.com"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Message</label>
+                  <textarea
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
+                    rows={5}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                    placeholder="Tell us how we can help you..."
+                    required
+                  />
+                </div>
+                
+                <button
+                  type="submit"
+                  className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  <Send className="w-5 h-5" />
+                  <span className="font-semibold">Send Message</span>
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </section>
@@ -465,9 +547,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 </div>
                 <span className="text-xl font-bold">AI Business Assistant</span>
               </div>
-              <p className="text-slate-400 leading-relaxed">
+              <p className="text-slate-400 leading-relaxed mb-6">
                 Empowering businesses with intelligent automation and AI-driven insights for unprecedented growth.
               </p>
+              <div className="flex space-x-4">
+                <a href="#" className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-slate-700 transition-colors">
+                  <span className="text-sm">f</span>
+                </a>
+                <a href="#" className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-slate-700 transition-colors">
+                  <span className="text-sm">t</span>
+                </a>
+                <a href="#" className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-slate-700 transition-colors">
+                  <span className="text-sm">in</span>
+                </a>
+              </div>
             </div>
             <div>
               <h4 className="font-bold mb-6 text-lg">Product</h4>
@@ -481,10 +574,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <div>
               <h4 className="font-bold mb-6 text-lg">Company</h4>
               <ul className="space-y-3 text-slate-400">
-                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
+                <li><a href="#about" className="hover:text-white transition-colors">About</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="#contact" className="hover:text-white transition-colors">Contact</a></li>
               </ul>
             </div>
             <div>

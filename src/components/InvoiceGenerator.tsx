@@ -1,18 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { 
-  Download, 
-  Eye, 
-  Upload, 
-  X, 
-  Plus,
-  Trash2,
-  Save
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Plus, Download, Send, Eye, Edit, Trash2, Calendar, DollarSign, User, Building } from 'lucide-react';
+import { database } from '../lib/database';
+import { CurrencyManager } from '../lib/currency';
+
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useDropzone } from 'react-dropzone';
-import { TierManager } from '../lib/tiers';
-import TierUpgradeModal from './TierUpgradeModal';
 
 interface InvoiceItem {
   description: string;
@@ -21,716 +13,868 @@ interface InvoiceItem {
   amount: number;
 }
 
-interface InvoiceData {
-  invoiceNumber: string;
-  clientName: string;
-  clientEmail: string;
-  clientAddress: string;
-  dueDate: string;
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  client_name: string;
+  client_email: string;
+  client_address?: string;
+  amount: number;
+  status: string;
+  due_date?: string;
   items: InvoiceItem[];
-  logo?: string;
-  companyName: string;
-  companyAddress: string;
-  companyEmail: string;
-  companyPhone: string;
-  notes: string;
-  terms: string;
-  taxRate: number;
-  taxAmount: number;
-  paymentInfo: {
-    bankName: string;
-    accountTitle: string;
-    accountNumber: string;
-    iban: string;
+  company_info: {
+    name?: string;
+    address?: string;
+    email?: string;
+    phone?: string;
   };
+  notes?: string;
+  terms?: string;
+  tax_rate?: number;
+  tax_amount?: number;
+  payment_info: {
+    method?: string;
+    details?: string;
+  };
+  created_at: string;
+  updated_at: string;
 }
 
-interface InvoiceGeneratorProps {
-  onSave: (invoice: any) => void;
-}
+export default function InvoiceGenerator() {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
+  const [loading, setLoading] = useState(true);
 
-const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
-  const [invoiceData, setInvoiceData] = useState<InvoiceData>({
-    invoiceNumber: '',
-    clientName: '',
-    clientEmail: '',
-    clientAddress: '',
-    dueDate: '',
-    items: [{ description: '', quantity: 1, rate: 0, amount: 0 }],
-    companyName: 'Your Company Name',
-    companyAddress: '123 Business St, City, State 12345',
-    companyEmail: 'contact@yourcompany.com',
-    companyPhone: '+1 (555) 123-4567',
-    notes: 'Thank you for your business!',
-    terms: 'Payment is due within 30 days of invoice date.',
-    taxRate: 0,
-    taxAmount: 0,
-    paymentInfo: {
-      bankName: 'Meezan Bank Limited',
-      accountTitle: 'Your Business Name',
-      accountNumber: '01234567890123',
-      iban: 'PK36MEZN0001234567890123'
-    }
-  });
-  
-  const [showPreview, setShowPreview] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const invoiceRef = useRef<HTMLDivElement>(null);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif']
+  const [newInvoice, setNewInvoice] = useState({
+    client_name: '',
+    client_email: '',
+    client_address: '',
+    due_date: '',
+    items: [{ description: '', quantity: 1, rate: 0, amount: 0 }] as InvoiceItem[],
+    company_info: {
+      name: '',
+      address: '',
+      email: '',
+      phone: ''
     },
-    maxFiles: 1,
-    onDrop: (acceptedFiles) => {
-      const file = acceptedFiles[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setInvoiceData(prev => ({ ...prev, logo: reader.result as string }));
-        };
-        reader.readAsDataURL(file);
-      }
+    notes: '',
+    terms: '',
+    tax_rate: 0,
+    payment_info: {
+      method: '',
+      details: ''
     }
   });
+
+  useEffect(() => {
+    loadInvoices();
+  }, []);
+
+  const loadInvoices = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await database.getInvoices();
+      if (!error && data) {
+        setInvoices(data);
+      }
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateInvoiceNumber = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `INV-${year}${month}-${random}`;
+  };
+
+  const calculateItemAmount = (quantity: number, rate: number) => {
+    return quantity * rate;
+  };
+
+  const calculateSubtotal = (items: InvoiceItem[]) => {
+    return items.reduce((sum, item) => sum + item.amount, 0);
+  };
+
+  const calculateTaxAmount = (subtotal: number, taxRate: number) => {
+    return (subtotal * taxRate) / 100;
+  };
+
+  const calculateTotal = (subtotal: number, taxAmount: number) => {
+    return subtotal + taxAmount;
+  };
+
+  const updateItemAmount = (index: number, field: 'quantity' | 'rate', value: number) => {
+    const updatedItems = [...newInvoice.items];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value,
+      amount: field === 'quantity' 
+        ? calculateItemAmount(value, updatedItems[index].rate)
+        : calculateItemAmount(updatedItems[index].quantity, value)
+    };
+    setNewInvoice({ ...newInvoice, items: updatedItems });
+  };
 
   const addItem = () => {
-    setInvoiceData(prev => ({
-      ...prev,
-      items: [...prev.items, { description: '', quantity: 1, rate: 0, amount: 0 }]
-    }));
+    setNewInvoice({
+      ...newInvoice,
+      items: [...newInvoice.items, { description: '', quantity: 1, rate: 0, amount: 0 }]
+    });
   };
 
   const removeItem = (index: number) => {
-    setInvoiceData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
-    }));
+    const updatedItems = newInvoice.items.filter((_, i) => i !== index);
+    setNewInvoice({ ...newInvoice, items: updatedItems });
   };
 
-  const updateItem = (index: number, field: keyof InvoiceItem, value: any) => {
-    setInvoiceData(prev => ({
-      ...prev,
-      items: prev.items.map((item, i) => {
-        if (i === index) {
-          const updatedItem = { ...item, [field]: value };
-          if (field === 'quantity' || field === 'rate') {
-            updatedItem.amount = updatedItem.quantity * updatedItem.rate;
-          }
-          return updatedItem;
-        }
-        return item;
-      })
-    }));
-  };
-
-  const calculateSubtotal = () => {
-    return invoiceData.items.reduce((sum, item) => sum + item.amount, 0);
-  };
-
-  const calculateTax = (subtotal?: number) => {
-    const baseAmount = subtotal || calculateSubtotal();
-    return (baseAmount * invoiceData.taxRate) / 100;
-  };
-
-  const calculateTotal = () => {
-    const subtotal = calculateSubtotal();
-    const tax = calculateTax(subtotal);
-    return subtotal + tax;
-  };
-
-  // Update tax amount when tax rate or items change
-  React.useEffect(() => {
-    const subtotal = calculateSubtotal();
-    const newTaxAmount = calculateTax(subtotal);
-    setInvoiceData(prev => ({ ...prev, taxAmount: newTaxAmount }));
-  }, [invoiceData.taxRate, invoiceData.items]);
-
-  const generatePDF = async () => {
-    // Check tier limits
-    if (!TierManager.canUseFeature('pdfExports')) {
-      setShowUpgradeModal(true);
-      return;
-    }
-    
-    if (!invoiceRef.current) return;
-
-    setIsGenerating(true);
+  const handleCreateInvoice = async () => {
     try {
-      const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
+      const subtotal = calculateSubtotal(newInvoice.items);
+      const taxAmount = calculateTaxAmount(subtotal, newInvoice.tax_rate);
+      const total = calculateTotal(subtotal, taxAmount);
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      const invoiceData = {
+        invoice_number: generateInvoiceNumber(),
+        client_name: newInvoice.client_name,
+        client_email: newInvoice.client_email,
+        client_address: newInvoice.client_address,
+        amount: total,
+        status: 'draft',
+        due_date: newInvoice.due_date || null,
+        items: newInvoice.items,
+        company_info: newInvoice.company_info,
+        notes: newInvoice.notes,
+        terms: newInvoice.terms,
+        tax_rate: newInvoice.tax_rate,
+        tax_amount: taxAmount,
+        payment_info: newInvoice.payment_info
+      };
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(`invoice-${invoiceData.invoiceNumber || 'draft'}.pdf`);
-      TierManager.updateUsage('pdfExports');
+      await database.createInvoice(invoiceData);
+      await loadInvoices();
+      setShowCreateModal(false);
+      resetForm();
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
-    } finally {
-      setIsGenerating(false);
+      console.error('Error creating invoice:', error);
     }
   };
 
-  const handleSave = () => {
-    // Check tier limits
-    if (!TierManager.canUseFeature('invoices')) {
-      setShowUpgradeModal(true);
-      return;
-    }
-    
-    if (!invoiceData.clientName || !invoiceData.clientEmail) {
-      alert('Please fill in client name and email');
-      return;
-    }
+  const handleUpdateInvoice = async () => {
+    if (!editingInvoice) return;
 
-    const invoiceToSave = {
-      invoice_number: invoiceData.invoiceNumber || `INV-${Date.now()}`,
-      client_name: invoiceData.clientName,
-      client_email: invoiceData.clientEmail,
-      client_address: invoiceData.clientAddress,
-      amount: calculateTotal(),
-      tax_rate: invoiceData.taxRate,
-      tax_amount: calculateTax(),
-      due_date: invoiceData.dueDate,
-      items: invoiceData.items,
+    try {
+      const subtotal = calculateSubtotal(editingInvoice.items);
+      const taxAmount = calculateTaxAmount(subtotal, editingInvoice.tax_rate || 0);
+      const total = calculateTotal(subtotal, taxAmount);
+
+      const updatedData = {
+        ...editingInvoice,
+        amount: total,
+        tax_amount: taxAmount
+      };
+
+      // In a real implementation, you'd call database.updateInvoice
+      setInvoices(prev => prev.map(inv => inv.id === editingInvoice.id ? updatedData : inv));
+      await loadInvoices();
+      setEditingInvoice(null);
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+    }
+  };
+
+  const handleDeleteInvoice = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this invoice?')) return;
+
+    try {
+      // In a real implementation, you'd call database.deleteInvoice
+      setInvoices(prev => prev.filter(inv => inv.id !== id));
+      await loadInvoices();
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+    }
+  };
+
+  const handleStatusChange = async (id: string, status: string) => {
+    try {
+      // In a real implementation, you'd call database.updateInvoice
+      setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status } : inv));
+      await loadInvoices();
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+    }
+  };
+
+  const resetForm = () => {
+    setNewInvoice({
+      client_name: '',
+      client_email: '',
+      client_address: '',
+      due_date: '',
+      items: [{ description: '', quantity: 1, rate: 0, amount: 0 }],
       company_info: {
-        name: invoiceData.companyName,
-        address: invoiceData.companyAddress,
-        email: invoiceData.companyEmail,
-        phone: invoiceData.companyPhone,
-        logo: invoiceData.logo
+        name: '',
+        address: '',
+        email: '',
+        phone: ''
       },
-      payment_info: invoiceData.paymentInfo,
-      notes: invoiceData.notes,
-      terms: invoiceData.terms,
-      status: 'draft'
-    };
-
-    console.log('💾 Saving invoice:', invoiceToSave);
-    onSave(invoiceToSave);
-    TierManager.updateUsage('invoices');
+      notes: '',
+      terms: '',
+      tax_rate: 0,
+      payment_info: {
+        method: '',
+        details: ''
+      }
+    });
   };
 
-  const InvoicePreview = () => (
-    <div ref={invoiceRef} className="bg-white p-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-8">
-        <div className="flex items-center space-x-4">
-          {invoiceData.logo && (
-            <img src={invoiceData.logo} alt="Company Logo" className="h-16 w-auto" />
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">{invoiceData.companyName}</h1>
-            <p className="text-slate-600">{invoiceData.companyAddress}</p>
-            <p className="text-slate-600">{invoiceData.companyEmail}</p>
-            <p className="text-slate-600">{invoiceData.companyPhone}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <h2 className="text-3xl font-bold text-slate-800">INVOICE</h2>
-          <p className="text-slate-600">#{invoiceData.invoiceNumber}</p>
-          <p className="text-slate-600">Date: {new Date().toLocaleDateString()}</p>
-          <p className="text-slate-600">Due: {invoiceData.dueDate}</p>
-        </div>
-      </div>
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'draft': return 'bg-gray-100 text-gray-800';
+      case 'sent': return 'bg-blue-100 text-blue-800';
+      case 'paid': return 'bg-green-100 text-green-800';
+      case 'overdue': return 'bg-red-100 text-red-800';
+      case 'cancelled': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
-      {/* Bill To */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-slate-800 mb-2">Bill To:</h3>
-        <div className="text-slate-600">
-          <p className="font-medium">{invoiceData.clientName}</p>
-          <p>{invoiceData.clientEmail}</p>
-          <p className="whitespace-pre-line">{invoiceData.clientAddress}</p>
-        </div>
-      </div>
+  const formatCurrency = (amount: number) => {
+    return CurrencyManager.formatAmount(amount);
+  };
 
-      {/* Items Table */}
-      <div className="mb-8">
-        <table className="w-full border-collapse border border-slate-300">
-          <thead>
-            <tr className="bg-slate-100">
-              <th className="border border-slate-300 px-4 py-2 text-left">Description</th>
-              <th className="border border-slate-300 px-4 py-2 text-center">Qty</th>
-              <th className="border border-slate-300 px-4 py-2 text-right">Rate</th>
-              <th className="border border-slate-300 px-4 py-2 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoiceData.items.map((item, index) => (
-              <tr key={index}>
-                <td className="border border-slate-300 px-4 py-2">{item.description}</td>
-                <td className="border border-slate-300 px-4 py-2 text-center">{item.quantity}</td>
-                <td className="border border-slate-300 px-4 py-2 text-right">${item.rate.toFixed(2)}</td>
-                <td className="border border-slate-300 px-4 py-2 text-right">${item.amount.toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Totals */}
-      <div className="flex justify-end mb-8">
-        <div className="w-64">
-          <div className="flex justify-between py-2">
-            <span>Subtotal:</span>
-            <span>${calculateSubtotal().toFixed(2)}</span>
-          </div>
-          {invoiceData.taxRate > 0 && (
-            <div className="flex justify-between py-2">
-              <span>Tax ({invoiceData.taxRate}%):</span>
-              <span>${calculateTax().toFixed(2)}</span>
-            </div>
-          )}
-          <div className="flex justify-between py-2 border-t border-slate-300 font-bold text-lg">
-            <span>Total:</span>
-            <span>${calculateTotal().toFixed(2)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Payment Information */}
-      <div className="mb-8 p-4 bg-slate-50 rounded-lg border">
-        <h4 className="font-semibold text-slate-800 mb-3">Payment Information</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-slate-600">Bank Name:</p>
-            <p className="font-medium text-slate-800">{invoiceData.paymentInfo.bankName}</p>
-          </div>
-          <div>
-            <p className="text-slate-600">Account Title:</p>
-            <p className="font-medium text-slate-800">{invoiceData.paymentInfo.accountTitle}</p>
-          </div>
-          <div>
-            <p className="text-slate-600">Account Number:</p>
-            <p className="font-medium text-slate-800">{invoiceData.paymentInfo.accountNumber}</p>
-          </div>
-          <div>
-            <p className="text-slate-600">IBAN:</p>
-            <p className="font-medium text-slate-800">{invoiceData.paymentInfo.iban}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Notes and Terms */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {invoiceData.notes && (
-          <div>
-            <h4 className="font-semibold text-slate-800 mb-2">Notes:</h4>
-            <p className="text-slate-600 text-sm">{invoiceData.notes}</p>
-          </div>
-        )}
-        {invoiceData.terms && (
-          <div>
-            <h4 className="font-semibold text-slate-800 mb-2">Terms & Conditions:</h4>
-            <p className="text-slate-600 text-sm">{invoiceData.terms}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  if (showPreview) {
+  if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-800">Invoice Preview</h3>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setShowPreview(false)}
-              className="flex items-center space-x-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
-            >
-              <X className="w-4 h-4" />
-              <span>Close</span>
-            </button>
-            <button
-              onClick={generatePDF}
-              disabled={isGenerating}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              {isGenerating ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              <span>{isGenerating ? 'Generating...' : 'Download PDF'}</span>
-            </button>
-          </div>
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="h-96 bg-gray-200 rounded"></div>
         </div>
-        <InvoicePreview />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Company Information */}
-      <div className="bg-slate-50 rounded-lg p-6 border">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">Company Information</h3>
-        
-        {/* Logo Upload */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-700 mb-2">Company Logo</label>
-          <div {...getRootProps()} className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-slate-400 transition-colors">
-            <input {...getInputProps()} />
-            {invoiceData.logo ? (
-              <div className="flex items-center justify-center space-x-4">
-                <img src={invoiceData.logo} alt="Logo" className="h-16 w-auto" />
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Invoice Generator</h1>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Create Invoice
+        </button>
+      </div>
+
+      {/* Invoice Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Invoices</p>
+              <p className="text-2xl font-bold text-gray-900">{invoices.length}</p>
+            </div>
+            <FileText className="w-8 h-8 text-indigo-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Paid</p>
+              <p className="text-2xl font-bold text-green-600">
+                {invoices.filter(inv => inv.status === 'paid').length}
+              </p>
+            </div>
+            <DollarSign className="w-8 h-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Pending</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {invoices.filter(inv => inv.status === 'sent').length}
+              </p>
+            </div>
+            <Calendar className="w-8 h-8 text-yellow-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+              <p className="text-2xl font-bold text-purple-600">
+                {formatCurrency(invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0))}
+              </p>
+            </div>
+            <DollarSign className="w-8 h-8 text-purple-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Invoices Table */}
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {invoices.map((invoice) => (
+                <tr key={invoice.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{invoice.invoice_number}</div>
+                      <div className="text-sm text-gray-500">
+                        Created {new Date(invoice.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                        <User className="w-4 h-4" />
+                        {invoice.client_name}
+                      </div>
+                      <div className="text-sm text-gray-500">{invoice.client_email}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {formatCurrency(invoice.amount)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <select
+                      value={invoice.status}
+                      onChange={(e) => handleStatusChange(invoice.id, e.target.value)}
+                      className={`text-xs font-semibold rounded-full px-2 py-1 border-0 ${getStatusColor(invoice.status)}`}
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="sent">Sent</option>
+                      <option value="paid">Paid</option>
+                      <option value="overdue">Overdue</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setViewingInvoice(invoice)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                        title="View"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setEditingInvoice(invoice)}
+                        className="text-green-600 hover:text-green-900"
+                        title="Edit"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteInvoice(invoice.id)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {invoices.length === 0 && (
+          <div className="text-center py-12">
+            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No invoices yet</h3>
+            <p className="text-gray-500">Create your first invoice to get started.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Create Invoice Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <h2 className="text-xl font-bold mb-6">Create New Invoice</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Client Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Client Information</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Client Name *</label>
+                  <input
+                    type="text"
+                    value={newInvoice.client_name}
+                    onChange={(e) => setNewInvoice({ ...newInvoice, client_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Client Email *</label>
+                  <input
+                    type="email"
+                    value={newInvoice.client_email}
+                    onChange={(e) => setNewInvoice({ ...newInvoice, client_email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Client Address</label>
+                  <textarea
+                    value={newInvoice.client_address}
+                    onChange={(e) => setNewInvoice({ ...newInvoice, client_address: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={newInvoice.due_date}
+                    onChange={(e) => setNewInvoice({ ...newInvoice, due_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Company Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Your Company Information</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                  <input
+                    type="text"
+                    value={newInvoice.company_info.name}
+                    onChange={(e) => setNewInvoice({
+                      ...newInvoice,
+                      company_info: { ...newInvoice.company_info, name: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Address</label>
+                  <textarea
+                    value={newInvoice.company_info.address}
+                    onChange={(e) => setNewInvoice({
+                      ...newInvoice,
+                      company_info: { ...newInvoice.company_info, address: e.target.value }
+                    })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Email</label>
+                  <input
+                    type="email"
+                    value={newInvoice.company_info.email}
+                    onChange={(e) => setNewInvoice({
+                      ...newInvoice,
+                      company_info: { ...newInvoice.company_info, email: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Phone</label>
+                  <input
+                    type="tel"
+                    value={newInvoice.company_info.phone}
+                    onChange={(e) => setNewInvoice({
+                      ...newInvoice,
+                      company_info: { ...newInvoice.company_info, phone: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Invoice Items */}
+            <div className="mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Invoice Items</h3>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setInvoiceData(prev => ({ ...prev, logo: undefined }));
-                  }}
-                  className="p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                  onClick={addItem}
+                  className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 flex items-center gap-1"
                 >
-                  <X className="w-4 h-4" />
+                  <Plus className="w-4 h-4" />
+                  Add Item
                 </button>
               </div>
-            ) : (
+
+              <div className="overflow-x-auto">
+                <table className="w-full border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Description</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Qty</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Rate</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Amount</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {newInvoice.items.map((item, index) => (
+                      <tr key={index} className="border-t">
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => {
+                              const updatedItems = [...newInvoice.items];
+                              updatedItems[index].description = e.target.value;
+                              setNewInvoice({ ...newInvoice, items: updatedItems });
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            placeholder="Item description"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => updateItemAmount(index, 'quantity', Number(e.target.value))}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                            min="1"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="number"
+                            value={item.rate}
+                            onChange={(e) => updateItemAmount(index, 'rate', Number(e.target.value))}
+                            className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                            min="0"
+                            step="0.01"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className="text-sm font-medium">{formatCurrency(item.amount)}</span>
+                        </td>
+                        <td className="px-4 py-2">
+                          {newInvoice.items.length > 1 && (
+                            <button
+                              onClick={() => removeItem(index)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Tax and Totals */}
+              <div className="mt-4 flex justify-end">
+                <div className="w-64 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Subtotal:</span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(calculateSubtotal(newInvoice.items))}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm">Tax Rate (%):</label>
+                    <input
+                      type="number"
+                      value={newInvoice.tax_rate}
+                      onChange={(e) => setNewInvoice({ ...newInvoice, tax_rate: Number(e.target.value) })}
+                      className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                    />
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-sm">Tax Amount:</span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(calculateTaxAmount(calculateSubtotal(newInvoice.items), newInvoice.tax_rate))}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-medium">Total:</span>
+                    <span className="font-bold">
+                      {formatCurrency(calculateTotal(
+                        calculateSubtotal(newInvoice.items),
+                        calculateTaxAmount(calculateSubtotal(newInvoice.items), newInvoice.tax_rate)
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
               <div>
-                <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-slate-600">Drop your logo here or click to upload</p>
-                <p className="text-xs text-slate-500">PNG, JPG, GIF up to 10MB</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={newInvoice.notes}
+                  onChange={(e) => setNewInvoice({ ...newInvoice, notes: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Additional notes or comments"
+                />
               </div>
-            )}
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Company Name</label>
-            <input
-              type="text"
-              value={invoiceData.companyName}
-              onChange={(e) => setInvoiceData(prev => ({ ...prev, companyName: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Company Email</label>
-            <input
-              type="email"
-              value={invoiceData.companyEmail}
-              onChange={(e) => setInvoiceData(prev => ({ ...prev, companyEmail: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Company Address</label>
-            <textarea
-              value={invoiceData.companyAddress}
-              onChange={(e) => setInvoiceData(prev => ({ ...prev, companyAddress: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-20 resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Company Phone</label>
-            <input
-              type="tel"
-              value={invoiceData.companyPhone}
-              onChange={(e) => setInvoiceData(prev => ({ ...prev, companyPhone: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-        </div>
-      </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
+                <textarea
+                  value={newInvoice.terms}
+                  onChange={(e) => setNewInvoice({ ...newInvoice, terms: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Payment terms and conditions"
+                />
+              </div>
+            </div>
 
-      {/* Invoice Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Invoice Number</label>
-          <input
-            type="text"
-            value={invoiceData.invoiceNumber}
-            onChange={(e) => setInvoiceData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder={`INV-${Date.now()}`}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Due Date</label>
-          <input
-            type="date"
-            value={invoiceData.dueDate}
-            onChange={(e) => setInvoiceData(prev => ({ ...prev, dueDate: e.target.value }))}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-      </div>
-
-      {/* Client Information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Client Name</label>
-          <input
-            type="text"
-            value={invoiceData.clientName}
-            onChange={(e) => setInvoiceData(prev => ({ ...prev, clientName: e.target.value }))}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Enter client name"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Client Email</label>
-          <input
-            type="email"
-            value={invoiceData.clientEmail}
-            onChange={(e) => setInvoiceData(prev => ({ ...prev, clientEmail: e.target.value }))}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="client@example.com"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Client Address</label>
-        <textarea
-          value={invoiceData.clientAddress}
-          onChange={(e) => setInvoiceData(prev => ({ ...prev, clientAddress: e.target.value }))}
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-20 resize-none"
-          placeholder="Client address"
-        />
-      </div>
-
-      {/* Invoice Items */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <label className="block text-sm font-medium text-slate-700">Invoice Items</label>
-          <button
-            onClick={addItem}
-            className="flex items-center space-x-1 px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Item</span>
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {invoiceData.items.map((item, index) => (
-            <div key={index} className="grid grid-cols-12 gap-3 items-end">
-              <div className="col-span-5">
+            {/* Payment Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
                 <input
                   type="text"
-                  value={item.description}
-                  onChange={(e) => updateItem(index, 'description', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Item description"
+                  value={newInvoice.payment_info.method}
+                  onChange={(e) => setNewInvoice({
+                    ...newInvoice,
+                    payment_info: { ...newInvoice.payment_info, method: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="e.g., Bank Transfer, PayPal"
                 />
               </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Qty"
-                  min="1"
-                />
-              </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  value={item.rate}
-                  onChange={(e) => updateItem(index, 'rate', parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Rate"
-                  step="0.01"
-                />
-              </div>
-              <div className="col-span-2">
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Details</label>
                 <input
                   type="text"
-                  value={`$${item.amount.toFixed(2)}`}
-                  readOnly
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50"
+                  value={newInvoice.payment_info.details}
+                  onChange={(e) => setNewInvoice({
+                    ...newInvoice,
+                    payment_info: { ...newInvoice.payment_info, details: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Account details or instructions"
                 />
               </div>
-              <div className="col-span-1">
-                {invoiceData.items.length > 1 && (
-                  <button
-                    onClick={() => removeItem(index)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={handleCreateInvoice}
+                disabled={!newInvoice.client_name || !newInvoice.client_email || newInvoice.items.some(item => !item.description)}
+                className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create Invoice
+              </button>
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  resetForm();
+                }}
+                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Invoice Modal */}
+      {viewingInvoice && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8">
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">INVOICE</h1>
+                <p className="text-lg text-gray-600">{viewingInvoice.invoice_number}</p>
+              </div>
+              <button
+                onClick={() => setViewingInvoice(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8 mb-8">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">From:</h3>
+                <div className="text-gray-700">
+                  {viewingInvoice.company_info.name && <p className="font-medium">{viewingInvoice.company_info.name}</p>}
+                  {viewingInvoice.company_info.address && <p className="whitespace-pre-line">{viewingInvoice.company_info.address}</p>}
+                  {viewingInvoice.company_info.email && <p>{viewingInvoice.company_info.email}</p>}
+                  {viewingInvoice.company_info.phone && <p>{viewingInvoice.company_info.phone}</p>}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Bill To:</h3>
+                <div className="text-gray-700">
+                  <p className="font-medium">{viewingInvoice.client_name}</p>
+                  <p>{viewingInvoice.client_email}</p>
+                  {viewingInvoice.client_address && <p className="whitespace-pre-line">{viewingInvoice.client_address}</p>}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8 mb-8">
+              <div>
+                <p><span className="font-medium">Invoice Date:</span> {new Date(viewingInvoice.created_at).toLocaleDateString()}</p>
+                {viewingInvoice.due_date && (
+                  <p><span className="font-medium">Due Date:</span> {new Date(viewingInvoice.due_date).toLocaleDateString()}</p>
                 )}
               </div>
+              <div>
+                <p><span className="font-medium">Status:</span> 
+                  <span className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(viewingInvoice.status)}`}>
+                    {viewingInvoice.status}
+                  </span>
+                </p>
+              </div>
             </div>
-          ))}
-        </div>
 
-        {/* Tax Configuration */}
-        <div className="mt-4 p-4 bg-slate-50 rounded-lg border">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Tax Rate (%)
-              </label>
-              <input
-                type="number"
-                value={invoiceData.taxRate}
-                onChange={(e) => setInvoiceData(prev => ({ ...prev, taxRate: parseFloat(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="0"
-                step="0.01"
-                min="0"
-                max="100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Tax Amount
-              </label>
-              <input
-                type="text"
-                value={`$${calculateTax().toFixed(2)}`}
-                readOnly
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-100"
-              />
-            </div>
-          </div>
+            <div className="mb-8">
+              <table className="w-full border border-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium text-gray-700">Description</th>
+                    <th className="px-4 py-3 text-center font-medium text-gray-700">Qty</th>
+                    <th className="px-4 py-3 text-right font-medium text-gray-700">Rate</th>
+                    <th className="px-4 py-3 text-right font-medium text-gray-700">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewingInvoice.items.map((item, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="px-4 py-3">{item.description}</td>
+                      <td className="px-4 py-3 text-center">{item.quantity}</td>
+                      <td className="px-4 py-3 text-right">{formatCurrency(item.rate)}</td>
+                      <td className="px-4 py-3 text-right">{formatCurrency(item.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-slate-600">Subtotal:</span>
-              <span className="font-medium">${calculateSubtotal().toFixed(2)}</span>
+              <div className="flex justify-end mt-4">
+                <div className="w-64 space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(calculateSubtotal(viewingInvoice.items))}</span>
+                  </div>
+                  {viewingInvoice.tax_rate && viewingInvoice.tax_rate > 0 && (
+                    <div className="flex justify-between">
+                      <span>Tax ({viewingInvoice.tax_rate}%):</span>
+                      <span>{formatCurrency(viewingInvoice.tax_amount || 0)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t pt-2 font-bold text-lg">
+                    <span>Total:</span>
+                    <span>{formatCurrency(viewingInvoice.amount)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            {invoiceData.taxRate > 0 && (
-              <div className="flex justify-between">
-                <span className="text-slate-600">Tax ({invoiceData.taxRate}%):</span>
-                <span className="font-medium">${calculateTax().toFixed(2)}</span>
+
+            {(viewingInvoice.notes || viewingInvoice.terms || viewingInvoice.payment_info.method) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t">
+                {viewingInvoice.notes && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Notes:</h4>
+                    <p className="text-gray-700 whitespace-pre-line">{viewingInvoice.notes}</p>
+                  </div>
+                )}
+                
+                {viewingInvoice.terms && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Terms & Conditions:</h4>
+                    <p className="text-gray-700 whitespace-pre-line">{viewingInvoice.terms}</p>
+                  </div>
+                )}
+                
+                {viewingInvoice.payment_info.method && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Payment Information:</h4>
+                    <p className="text-gray-700">
+                      <span className="font-medium">Method:</span> {viewingInvoice.payment_info.method}
+                    </p>
+                    {viewingInvoice.payment_info.details && (
+                      <p className="text-gray-700">
+                        <span className="font-medium">Details:</span> {viewingInvoice.payment_info.details}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
-            <div className="flex justify-between border-t pt-2">
-              <span className="font-bold text-slate-800">Total:</span>
-              <span className="text-xl font-bold text-green-600">${calculateTotal().toFixed(2)}</span>
+
+            <div className="flex gap-3 mt-8 pt-8 border-t">
+              <button
+                onClick={() => generatePDF(viewingInvoice)}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download PDF
+              </button>
+              <button
+                onClick={() => setViewingInvoice(null)}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Payment Information */}
-      <div className="bg-slate-50 rounded-lg p-6 border">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">Payment Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Bank Name</label>
-            <input
-              type="text"
-              value={invoiceData.paymentInfo.bankName}
-              onChange={(e) => setInvoiceData(prev => ({
-                ...prev,
-                paymentInfo: { ...prev.paymentInfo, bankName: e.target.value }
-              }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Account Title</label>
-            <input
-              type="text"
-              value={invoiceData.paymentInfo.accountTitle}
-              onChange={(e) => setInvoiceData(prev => ({
-                ...prev,
-                paymentInfo: { ...prev.paymentInfo, accountTitle: e.target.value }
-              }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Account Number</label>
-            <input
-              type="text"
-              value={invoiceData.paymentInfo.accountNumber}
-              onChange={(e) => setInvoiceData(prev => ({
-                ...prev,
-                paymentInfo: { ...prev.paymentInfo, accountNumber: e.target.value }
-              }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">IBAN</label>
-            <input
-              type="text"
-              value={invoiceData.paymentInfo.iban}
-              onChange={(e) => setInvoiceData(prev => ({
-                ...prev,
-                paymentInfo: { ...prev.paymentInfo, iban: e.target.value }
-              }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Notes and Terms */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Notes</label>
-          <textarea
-            value={invoiceData.notes}
-            onChange={(e) => setInvoiceData(prev => ({ ...prev, notes: e.target.value }))}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-24 resize-none"
-            placeholder="Additional notes..."
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Terms & Conditions</label>
-          <textarea
-            value={invoiceData.terms}
-            onChange={(e) => setInvoiceData(prev => ({ ...prev, terms: e.target.value }))}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-24 resize-none"
-            placeholder="Payment terms..."
-          />
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex space-x-4">
-        <button
-          onClick={handleSave}
-          className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          <Save className="w-4 h-4" />
-          <span>Save Invoice</span>
-        </button>
-        <button
-          onClick={() => setShowPreview(true)}
-          className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Eye className="w-4 h-4" />
-          <span>Preview</span>
-        </button>
-      </div>
-      
-      <TierUpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        currentFeature="invoice generation"
-      />
+      )}
     </div>
   );
-};
-
-export default InvoiceGenerator;
+}

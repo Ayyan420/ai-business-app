@@ -411,6 +411,38 @@ export const database = {
     }
   },
 
+  async deleteTask(id: string) {
+    if (isDemoMode) {
+      const index = demoData.tasks.findIndex(task => task.id === id)
+      if (index !== -1) {
+        demoData.tasks.splice(index, 1)
+        return { data: { id }, error: null }
+      }
+      return { data: null, error: 'Task not found' }
+    }
+    
+    try {
+      console.log('🗑️ Deleting task:', id)
+      const { data, error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('❌ Delete task error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Task deleted successfully:', data)
+      return { data, error: null }
+    } catch (error) {
+      console.error('❌ Delete task error:', error)
+      return { data: null, error }
+    }
+  },
+
   // Business Portfolios
   async getPortfolio(userId: string) {
     if (isDemoMode) {
@@ -439,13 +471,165 @@ export const database = {
     }
   },
 
+  async getPortfolioBySlug(slug: string) {
+    if (isDemoMode) {
+      // For demo mode, create a sample portfolio if none exists
+      let portfolio = demoData.portfolios.find(p => p.slug === slug);
+      
+      if (!portfolio && slug) {
+        // Create a demo portfolio for any slug
+        portfolio = {
+          id: 'demo-portfolio',
+          user_id: slug.includes('demo') ? 'demo-user' : `user-${slug}`,
+          business_name: 'Demo Business',
+          tagline: 'Innovative Solutions for Modern Challenges',
+          description: 'We are a forward-thinking company dedicated to providing cutting-edge solutions that help businesses thrive in today\'s competitive landscape. Our team of experts combines creativity with technical expertise to deliver exceptional results.',
+          slug: slug,
+          is_public: true,
+          services: [
+            'Web Development',
+            'Mobile App Development', 
+            'Digital Marketing',
+            'UI/UX Design',
+            'Business Consulting',
+            'AI Integration'
+          ],
+          portfolio_items: [
+            {
+              title: 'E-commerce Platform',
+              description: 'A modern, responsive e-commerce solution with advanced features',
+              image: 'https://images.pexels.com/photos/230544/pexels-photo-230544.jpeg?auto=compress&cs=tinysrgb&w=600',
+              tech: ['React', 'Node.js', 'MongoDB', 'Stripe'],
+              link: 'https://example.com'
+            },
+            {
+              title: 'Mobile Banking App',
+              description: 'Secure and user-friendly mobile banking application',
+              image: 'https://images.pexels.com/photos/147413/twitter-facebook-together-exchange-147413.jpeg?auto=compress&cs=tinysrgb&w=600',
+              tech: ['React Native', 'Firebase', 'TypeScript'],
+              link: 'https://example.com'
+            },
+            {
+              title: 'AI Dashboard',
+              description: 'Intelligent analytics dashboard with machine learning insights',
+              image: 'https://images.pexels.com/photos/590022/pexels-photo-590022.jpeg?auto=compress&cs=tinysrgb&w=600',
+              tech: ['Python', 'TensorFlow', 'React', 'D3.js'],
+              link: 'https://example.com'
+            }
+          ],
+          contact_info: {
+            email: 'hello@demobusiness.com',
+            phone: '+1 (555) 123-4567',
+            address: '123 Business Street, Tech City, TC 12345'
+          },
+          social_links: {
+            website: 'https://demobusiness.com',
+            linkedin: 'https://linkedin.com/company/demobusiness',
+            twitter: 'https://twitter.com/demobusiness',
+            github: 'https://github.com/demobusiness'
+          },
+          theme_settings: {
+            primary_color: '#3B82F6',
+            secondary_color: '#8B5CF6',
+            accent_color: '#10B981'
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        // Add to demo data
+        demoData.portfolios.push(portfolio);
+      }
+      
+      if (portfolio) {
+        const enhancedPortfolio = {
+          ...portfolio,
+          stats: {
+            projects_completed: portfolio.portfolio_items?.length || 3,
+            clients_served: Math.floor((portfolio.portfolio_items?.length || 3) * 0.8) + 5,
+            years_experience: 3,
+            success_rate: 95
+          },
+          tools: portfolio.tools || ['React', 'Node.js', 'TypeScript', 'PostgreSQL', 'MongoDB', 'AWS'],
+          testimonials: portfolio.testimonials || [
+            {
+              name: 'Sarah Johnson',
+              company: 'Tech Startup Inc.',
+              text: 'Excellent work and professional service. Highly recommended!',
+              rating: 5,
+              image: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'
+            },
+            {
+              name: 'Mike Chen',
+              company: 'Digital Solutions Ltd.',
+              text: 'Outstanding results and great communication throughout the project.',
+              rating: 5,
+              image: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'
+            }
+          ]
+        }
+        return { data: enhancedPortfolio, error: null }
+      }
+      return { data: null, error: 'Portfolio not found' }
+    }
+    
+    try {
+      console.log('🌐 Fetching portfolio by slug:', slug)
+      const { data, error } = await supabase
+        .from('portfolios')
+        .select('*')
+        .eq('slug', slug)
+        .eq('is_public', true)
+        .single()
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Get portfolio by slug error:', error)
+        return { data: null, error }
+      }
+      
+      if (data) {
+        // Enhance with dynamic data but keep user's actual data
+        const enhancedData = {
+          ...data,
+          // Only add defaults for missing required fields
+          services: data.services || [],
+          portfolio_items: data.portfolio_items || [],
+          contact_info: data.contact_info || {},
+          social_links: data.social_links || {},
+          theme_settings: data.theme_settings || {
+            primary_color: '#3B82F6',
+            secondary_color: '#8B5CF6',
+            accent_color: '#10B981'
+          },
+          stats: data.stats || {
+            projects_completed: data.portfolio_items?.length || 0,
+            clients_served: Math.floor((data.portfolio_items?.length || 0) * 0.8),
+            years_experience: 3,
+            success_rate: 95
+          },
+          tools: data.tools || [],
+          testimonials: data.testimonials || []
+        }
+        console.log('✅ Portfolio by slug fetched:', data.business_name)
+        return { data: enhancedData, error: null }
+      }
+      
+      console.log('✅ Portfolio by slug fetched:', data ? 'Found' : 'Not found')
+      return { data, error: null }
+    } catch (error) {
+      console.error('❌ Get portfolio by slug error:', error)
+      return { data: null, error }
+    }
+  },
+
   async createOrUpdatePortfolio(portfolioData: any) {
     if (isDemoMode) {
       const existingIndex = demoData.portfolios.findIndex(p => p.user_id === portfolioData.user_id)
       const portfolio = {
         ...portfolioData,
         id: existingIndex >= 0 ? demoData.portfolios[existingIndex].id : Date.now().toString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        unique_id: portfolioData.unique_id || `portfolio-${portfolioData.user_id || 'demo'}-${Date.now()}`
       }
       
       if (existingIndex >= 0) {
@@ -468,7 +652,8 @@ export const database = {
       const portfolio = {
         ...portfolioData,
         user_id: user.id,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        unique_id: portfolioData.unique_id || `portfolio-${user.id}-${Date.now()}`
       }
       
       console.log('💾 Creating/updating portfolio:', portfolio)
@@ -763,7 +948,7 @@ export const database = {
     }
   },
 
-  // Stats
+  // Stats (removed team_members)
   async getStats(userId?: string) {
     if (isDemoMode) {
       const totalRevenue = demoData.invoices
@@ -779,8 +964,7 @@ export const database = {
           revenue: totalRevenue,
           campaigns: activeCampaigns,
           tasks: completedTasks,
-          leads: totalLeads,
-          team_members: demoData.team_members.length
+          leads: totalLeads
         }, 
         error: null 
       }
@@ -795,13 +979,12 @@ export const database = {
       
       console.log('📊 Calculating stats for user:', user.id)
       
-      // Get all data for stats calculation
-      const [invoicesResult, campaignsResult, tasksResult, leadsResult, teamResult] = await Promise.all([
+      // Get all data for stats calculation (removed team members)
+      const [invoicesResult, campaignsResult, tasksResult, leadsResult] = await Promise.all([
         this.getInvoices(user.id),
         this.getCampaigns(user.id),
         this.getTasks(user.id),
-        this.getLeads(user.id),
-        this.getTeamMembers(user.id)
+        this.getLeads(user.id)
       ])
       
       const totalRevenue = invoicesResult.data?.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0
@@ -812,8 +995,7 @@ export const database = {
         revenue: totalRevenue,
         campaigns: activeCampaigns,
         tasks: completedTasks,
-        leads: leadsResult.data?.length || 0,
-        team_members: teamResult.data?.length || 0
+        leads: leadsResult.data?.length || 0
       }
       
       console.log('✅ Stats calculated:', stats)
@@ -824,14 +1006,14 @@ export const database = {
     }
   },
 
-  // Admin functions
+  // Super Admin functions
   async getAllUsers() {
     if (isDemoMode) {
       return { data: [JSON.parse(localStorage.getItem('demoUser') || '{}')], error: null }
     }
     
     try {
-      console.log('👥 Fetching all users (admin)')
+      console.log('👥 Fetching all users (super admin)')
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -842,7 +1024,7 @@ export const database = {
         return { data: [], error }
       }
       
-      console.log('✅ All users fetched:', data?.length || 0)
+      console.log('✅ All users fetched by super admin:', data?.length || 0)
       return { data: data || [], error: null }
     } catch (error) {
       console.error('❌ Get all users error:', error)
@@ -856,7 +1038,7 @@ export const database = {
     }
     
     try {
-      console.log('💳 Fetching all payments (admin)')
+      console.log('💳 Fetching all payments (super admin)')
       const { data, error } = await supabase
         .from('payments')
         .select(`
@@ -873,7 +1055,7 @@ export const database = {
         return { data: [], error }
       }
       
-      console.log('✅ All payments fetched:', data?.length || 0)
+      console.log('✅ All payments fetched by super admin:', data?.length || 0)
       return { data: data || [], error: null }
     } catch (error) {
       console.error('❌ Get all payments error:', error)
@@ -909,6 +1091,88 @@ export const database = {
       return { data, error: null }
     } catch (error) {
       console.error('❌ Update payment status error:', error)
+      return { data: null, error }
+    }
+  },
+
+  async deleteAllUserData(userId?: string) {
+    if (isDemoMode) {
+      // Clear all demo data
+      localStorage.removeItem('demoUser')
+      localStorage.removeItem('userTier')
+      localStorage.removeItem('userTierUsage')
+      localStorage.removeItem('expenses')
+      localStorage.removeItem('income')
+      localStorage.removeItem('aiBusinessUser')
+      localStorage.removeItem('userSettings')
+      localStorage.removeItem('lastPayment')
+      
+      // Reset demo data
+      demoData = {
+        invoices: [],
+        campaigns: [],
+        tasks: [],
+        portfolios: [],
+        leads: [],
+        payments: [],
+        posts: []
+      }
+      
+      return { data: { deleted: true }, error: null }
+    }
+    
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return { data: null, error: 'No user found' }
+      userId = user.id
+    }
+    
+    try {
+      console.log('🗑️ Deleting all user data for:', userId)
+      
+      // Delete all user-related data in order (respecting foreign key constraints)
+      const tables = [
+        'notifications',
+        'email_templates', 
+        'team_members',
+        'leads',
+        'portfolios',
+        'user_settings',
+        'payments',
+        'usage_tracking',
+        'tasks',
+        'campaigns',
+        'invoices',
+        'subscriptions',
+        'users'
+      ]
+      
+      for (const table of tables) {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq('user_id', userId)
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error(`❌ Error deleting from ${table}:`, error)
+        }
+      }
+      
+      // Finally delete the user account
+      const { error: userError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId)
+      
+      if (userError) {
+        console.error('❌ Error deleting user:', userError)
+        return { data: null, error: userError }
+      }
+      
+      console.log('✅ All user data deleted successfully')
+      return { data: { deleted: true }, error: null }
+    } catch (error) {
+      console.error('❌ Delete user data error:', error)
       return { data: null, error }
     }
   }

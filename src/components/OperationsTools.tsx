@@ -283,16 +283,172 @@ const OperationsTools: React.FC = () => {
           {selectedTool === 'workflow' && renderWorkflowOptimization()}
           
           {selectedTool === 'schedule' && (
-            <div className="text-center py-12">
-              <Clock className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600">Schedule management tool coming soon...</p>
+            <div className="space-y-6">
+              <div className="bg-slate-50 dark:bg-gray-700 rounded-lg p-6 border dark:border-gray-600">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Schedule Event</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Event Title *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Team meeting"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white"
+                      value={new Date().toISOString().split('T')[0]}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Start Time *
+                    </label>
+                    <input
+                      type="time"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Duration *
+                    </label>
+                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white" required>
+                      <option value="">Select Duration</option>
+                      <option value="30">30 minutes</option>
+                      <option value="60">1 hour</option>
+                      <option value="90">1.5 hours</option>
+                      <option value="120">2 hours</option>
+                    </select>
+                  </div>
+                </div>
+                <button className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                  Schedule Event
+                </button>
+              </div>
+              
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-slate-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Today's Schedule</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-4 p-3 bg-slate-50 dark:bg-gray-700 rounded-lg">
+                    <div className="text-orange-600 font-bold">09:00</div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-slate-800 dark:text-white">Team Standup</h4>
+                      <p className="text-sm text-slate-600 dark:text-gray-400">Daily sync with development team</p>
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-gray-500">30 min</div>
+                  </div>
+                  <div className="flex items-center space-x-4 p-3 bg-slate-50 dark:bg-gray-700 rounded-lg">
+                    <div className="text-orange-600 font-bold">14:00</div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-slate-800 dark:text-white">Client Presentation</h4>
+                      <p className="text-sm text-slate-600 dark:text-gray-400">Q1 results review with Acme Corp</p>
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-gray-500">1 hour</div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           
           {selectedTool === 'automation' && (
-            <div className="text-center py-12">
-              <Settings className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600">Process automation tool coming soon...</p>
+            <div className="space-y-6">
+              <div className="bg-slate-50 dark:bg-gray-700 rounded-lg p-6 border dark:border-gray-600">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Create Automation</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Automation Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="New lead notification"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Trigger Event *
+                    </label>
+                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white" required>
+                      <option value="">Select Trigger</option>
+                      <option value="new-lead">New Lead Created</option>
+                      <option value="task-completed">Task Completed</option>
+                      <option value="invoice-paid">Invoice Paid</option>
+                      <option value="campaign-launched">Campaign Launched</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Action *
+                    </label>
+                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white" required>
+                      <option value="">Select Action</option>
+                      <option value="send-email">Send Email</option>
+                      <option value="create-task">Create Task</option>
+                      <option value="update-status">Update Status</option>
+                      <option value="send-notification">Send Notification</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                      Delay (optional)
+                    </label>
+                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white">
+                      <option value="">Immediate</option>
+                      <option value="5">5 minutes</option>
+                      <option value="60">1 hour</option>
+                      <option value="1440">1 day</option>
+                      <option value="10080">1 week</option>
+                    </select>
+                  </div>
+                </div>
+                <button className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                  Create Automation
+                </button>
+              </div>
+              
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-slate-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Active Automations</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-gray-700 rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-slate-800 dark:text-white">Welcome Email Sequence</h4>
+                      <p className="text-sm text-slate-600 dark:text-gray-400">Trigger: New user signup → Send welcome email</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 rounded">Active</span>
+                      <button className="text-slate-400 hover:text-slate-600 dark:hover:text-gray-300">
+                        <Settings className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-gray-700 rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-slate-800 dark:text-white">Invoice Reminder</h4>
+                      <p className="text-sm text-slate-600 dark:text-gray-400">Trigger: Invoice overdue → Send reminder email</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 rounded">Active</span>
+                      <button className="text-slate-400 hover:text-slate-600 dark:hover:text-gray-300">
+                        <Settings className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

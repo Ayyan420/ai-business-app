@@ -14,9 +14,15 @@ import PortfolioBuilder from './components/PortfolioBuilder';
 import CRMDashboard from './components/CRMDashboard';
 import PostMaker from './components/PostMaker';
 import AccountingTools from './components/AccountingTools';
+import AdminPanel from './components/AdminPanel';
+import PublicPortfolio from './components/PublicPortfolio';
+import TodoList from './components/TodoList';
+import BrandKitGenerator from './components/BrandKitGenerator';
+import SOPCreator from './components/SOPCreator';
 import { database } from './lib/database';
 import { emailService, auth, isDemoMode } from './lib/supabase';
 import { Menu } from 'lucide-react';
+import { CurrencyManager } from './lib/currency';
 
 interface User {
   id: string;
@@ -36,7 +42,15 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Initialize currency rates if needed
+    if (CurrencyManager.shouldUpdateRates()) {
+      CurrencyManager.updateExchangeRates();
+    }
+    
     initializeApp();
+    
+    // Handle OAuth callback
+    handleOAuthCallback();
     
     // Listen for settings modal
     const handleOpenSettings = () => setShowSettings(true);
@@ -47,6 +61,74 @@ function App() {
     };
   }, []);
 
+  const handleOAuthCallback = async () => {
+    // Check if this is an OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const fragment = window.location.hash;
+    
+    if (fragment.includes('access_token') || urlParams.get('code')) {
+      console.log('🔗 OAuth callback detected');
+      
+      try {
+        const { data: { session }, error } = await auth.getCurrentSession();
+        
+        if (error) {
+          console.error('❌ OAuth callback error:', error);
+          setCurrentPage('auth');
+          return;
+        }
+        
+        if (session?.user) {
+          // Check if email is confirmed
+          if (!session.user.email_confirmed_at) {
+            console.log('⚠️ Email not confirmed, redirecting to auth');
+            setCurrentPage('auth');
+            return;
+          }
+          
+          // Email is confirmed, handle profile creation
+          const { data: profile, error: profileError } = await auth.handleEmailConfirmation(session.user);
+          
+          if (profileError || !profile) {
+            console.error('❌ Profile creation failed:', profileError);
+            setCurrentPage('auth');
+            return;
+          }
+          
+          const userData = {
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            avatar: session.user.user_metadata?.avatar_url,
+            tier: profile.tier || 'free'
+          };
+          
+          setUser(userData);
+          localStorage.setItem('aiBusinessUser', JSON.stringify(userData));
+          setCurrentPage('dashboard');
+          
+          // Clean up URL
+          window.history.replaceState({}, document.title, '/dashboard');
+        }
+      } catch (error) {
+        console.error('❌ OAuth callback processing error:', error);
+        setCurrentPage('auth');
+      }
+    }
+  };
+
+  // Handle portfolio routing
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/portfolio/')) {
+      const slug = path.split('/portfolio/')[1];
+      if (slug && slug.trim()) {
+        setCurrentPage('portfolio-public');
+        setLoading(false);
+        return;
+      }
+    }
+  }, []);
   const initializeApp = async () => {
     setLoading(true);
     
@@ -56,6 +138,13 @@ function App() {
       
       if (sessionData?.session?.user) {
         const userData = sessionData.session.user;
+        
+        // Check if email is confirmed for OAuth users
+        if (!userData.email_confirmed_at) {
+          console.log('⚠️ Email not confirmed, staying on landing page');
+          setLoading(false);
+          return;
+        }
         
         // Get user profile from database
         const { data: profile } = await database.getCurrentUser();
@@ -72,6 +161,7 @@ function App() {
             tier: 'free'
           };
           
+          await database.updateUserProfile(newUser.id, newUser);
           setUser(newUser);
           setCurrentPage('dashboard');
         }
@@ -90,6 +180,12 @@ function App() {
     
     setLoading(false);
   };
+
+  // Handle public portfolio route
+  if (currentPage === 'portfolio-public') {
+    const slug = window.location.pathname.split('/portfolio/')[1];
+    return <PublicPortfolio slug={slug} />;
+  }
 
   const handleLogin = async (userData: User) => {
     setUser(userData);
@@ -140,6 +236,14 @@ function App() {
         return <PostMaker />;
       case 'accounting':
         return <AccountingTools />;
+      case 'admin':
+        return <AdminPanel />;
+      case 'todos':
+        return <TodoList />;
+      case 'brand-kit':
+        return <BrandKitGenerator />;
+      case 'sop-creator':
+        return <SOPCreator />;
       default:
         return <Dashboard setActiveSection={setActiveSection} user={user} />;
     }

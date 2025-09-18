@@ -370,7 +370,17 @@ Requirements:
                     {new Date(campaign.created_at).toLocaleDateString()}
                   </span>
                   <button
-                    onClick={() => setGeneratedContent(campaign.content)}
+                    onClick={() => {
+                      setGeneratedContent(campaign.content);
+                      // Also load the campaign data into the form
+                      setFormData({
+                        targetAudience: campaign.target_audience || '',
+                        product: campaign.product || '',
+                        benefits: campaign.benefits || '',
+                        tone: campaign.tone || 'professional',
+                        platform: campaign.platform || 'general'
+                      });
+                    }}
                     className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                   >
                     Load

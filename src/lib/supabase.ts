@@ -46,33 +46,81 @@ export const auth = {
         email,
         password,
         options: {
-          data: userData
+          data: userData,
+          emailRedirectTo: `${window.location.origin}/dashboard`
         }
       })
 
       console.log('✅ Signup result:', { success: !!data.user, error: error?.message })
 
+      // Create user profile only if email is confirmed
       if (data.user && !error) {
-        // Create user profile in our users table
-        console.log('👤 Creating user profile in database')
-        const { data: profile, error: profileError } = await supabase.from('users').insert({
-          id: data.user.id,
-          email: data.user.email,
-          name: userData.name,
-          tier: 'free',
-          created_at: new Date().toISOString()
-        }).select().single()
-        
-        if (profileError) {
-          console.error('❌ Profile creation error:', profileError)
+        if (data.user.email_confirmed_at) {
+          // Email already confirmed (shouldn't happen with new signups)
+          console.log('👤 Creating user profile in database')
+          const { data: profile, error: profileError } = await supabase.from('users').insert({
+            id: data.user.id,
+            email: data.user.email,
+            name: userData.name,
+            tier: 'free',
+            created_at: new Date().toISOString()
+          }).select().single()
+          
+          if (profileError) {
+            console.error('❌ Profile creation error:', profileError)
+          } else {
+            console.log('✅ User profile created successfully:', profile)
+          }
         } else {
-          console.log('✅ User profile created successfully:', profile)
+          console.log('📧 Email confirmation required - profile will be created after confirmation')
         }
       }
 
       return { data, error }
     } catch (error) {
       console.error('❌ Signup error:', error)
+      return { data: null, error: error as any }
+    }
+  },
+
+  async handleEmailConfirmation(user: any) {
+    if (isDemoMode || !supabase) {
+      return { data: { user }, error: null }
+    }
+
+    try {
+      console.log('✅ Email confirmed, creating user profile...')
+      
+      // Check if profile already exists
+      const { data: existingProfile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      
+      if (!existingProfile) {
+        // Create user profile in our users table
+        const { data: profile, error: profileError } = await supabase.from('users').insert({
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+          tier: 'free',
+          created_at: new Date().toISOString()
+        }).select().single()
+        
+        if (profileError) {
+          console.error('❌ Profile creation error:', profileError)
+          return { data: null, error: profileError }
+        } else {
+          console.log('✅ User profile created successfully:', profile)
+          return { data: profile, error: null }
+        }
+      } else {
+        console.log('✅ User profile already exists:', existingProfile)
+        return { data: existingProfile, error: null }
+      }
+    } catch (error) {
+      console.error('❌ Email confirmation handling error:', error)
       return { data: null, error: error as any }
     }
   },
@@ -128,6 +176,49 @@ export const auth = {
     }
   },
 
+  async signInWithGoogle() {
+
+    try {
+      console.log('🔐 Attempting Google OAuth signin')
+      
+      if (isDemoMode || !supabase) {
+        console.log('📱 Demo mode: Simulating Google signin')
+        const googleUser = {
+          id: `google-demo-${Date.now()}`,
+          email: 'google.demo@example.com',
+          name: 'Google Demo User',
+          tier: 'free',
+          created_at: new Date().toISOString(),
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=google'
+        }
+        localStorage.setItem('demoUser', JSON.stringify(googleUser))
+        return { data: { user: googleUser }, error: null }
+      }
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      })
+
+      if (error) {
+        console.error('❌ Google OAuth error:', error)
+        return { data: null, error }
+      }
+
+      console.log('✅ Google OAuth initiated successfully')
+      return { data, error }
+    } catch (error) {
+      console.error('❌ Google signin error:', error)
+      return { data: null, error: error as any }
+    }
+  },
+
   async signOut() {
     if (isDemoMode || !supabase) {
       localStorage.removeItem('demoUser')
@@ -150,6 +241,34 @@ export const auth = {
       return demoUser ? { data: { session: { user: JSON.parse(demoUser) } }, error: null } : { data: { session: null }, error: null }
     }
     return await supabase.auth.getSession()
+  },
+
+  async updatePassword(newPassword: string) {
+    if (isDemoMode || !supabase) {
+      console.log('📱 Demo mode: Password update simulated')
+      return { data: { user: null }, error: null }
+    }
+    
+    try {
+      console.log('🔐 Updating password...')
+      // First check if user is authenticated
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError || !user) {
+        console.error('❌ User not authenticated for password update')
+        return { data: null, error: { message: 'Please log in again to update your password' } }
+      }
+      
+      const result = await supabase.auth.updateUser({ 
+        password: newPassword 
+      })
+      
+      console.log('✅ Password update result:', { success: !result.error })
+      return result
+    } catch (error) {
+      console.error('❌ Password update error:', error)
+      return { data: null, error: error as any }
+    }
   }
 }
 

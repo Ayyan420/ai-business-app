@@ -10,6 +10,7 @@ import {
   Download,
   AlertTriangle
 } from 'lucide-react';
+import { CurrencyManager } from '../lib/currency';
 
 const BudgetPlanner: React.FC = () => {
   const [budgets, setBudgets] = useState([
@@ -275,7 +276,7 @@ const BudgetPlanner: React.FC = () => {
               <h3 className="font-medium text-slate-800 dark:text-white">{budget.name}</h3>
               <p className="text-sm text-slate-600 dark:text-gray-400 capitalize">{budget.period}</p>
               <p className="text-lg font-bold text-slate-800 dark:text-white mt-2">
-                ${budget.totalAmount.toLocaleString()}
+                {CurrencyManager.formatAmount(budget.totalAmount)}
               </p>
             </button>
           ))}
@@ -291,7 +292,7 @@ const BudgetPlanner: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                ${selectedBudget.totalAmount.toLocaleString()}
+                {CurrencyManager.formatAmount(selectedBudget.totalAmount)}
               </p>
               <p className="text-sm text-slate-600 dark:text-gray-400">Total Budget</p>
             </div>
@@ -305,7 +306,7 @@ const BudgetPlanner: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                ${calculateTotalSpent(selectedBudget).toLocaleString()}
+                {CurrencyManager.formatAmount(calculateTotalSpent(selectedBudget))}
               </p>
               <p className="text-sm text-slate-600 dark:text-gray-400">Total Spent</p>
             </div>
@@ -325,7 +326,7 @@ const BudgetPlanner: React.FC = () => {
             </div>
             <div>
               <p className={`text-2xl font-bold ${getVarianceColor(calculateVariance(selectedBudget))}`}>
-                ${Math.abs(calculateVariance(selectedBudget)).toLocaleString()}
+                {CurrencyManager.formatAmount(Math.abs(calculateVariance(selectedBudget)))}
               </p>
               <p className="text-sm text-slate-600 dark:text-gray-400">
                 {calculateVariance(selectedBudget) >= 0 ? 'Remaining' : 'Over Budget'}
@@ -369,7 +370,7 @@ const BudgetPlanner: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-slate-600 dark:text-gray-400">
-                      ${category.spent.toLocaleString()} / ${category.allocated.toLocaleString()}
+                      {CurrencyManager.formatAmount(category.spent)} / {CurrencyManager.formatAmount(category.allocated)}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-gray-500">
                       {percentage.toFixed(1)}% used
@@ -386,7 +387,7 @@ const BudgetPlanner: React.FC = () => {
                 
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-xs text-slate-500 dark:text-gray-500">
-                    ${(category.allocated - category.spent).toLocaleString()} remaining
+                    {CurrencyManager.formatAmount(category.allocated - category.spent)} remaining
                   </span>
                   <div className="flex space-x-2">
                     <button className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded">

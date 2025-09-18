@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Bell, Shield, CreditCard, Database, Globe } from 'lucide-react';
 import { TierManager, TIERS } from '../lib/tiers';
 import { database } from '../lib/database';
+import { auth } from '../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
 import PaymentModal from './PaymentModal';
+import { CurrencyManager, SUPPORTED_CURRENCIES } from '../lib/currency';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -18,13 +20,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
     emailUpdates: true,
     autoSave: true,
     language: 'en',
-    currency: 'USD',
+    currency: CurrencyManager.getUserCurrency(),
     timezone: 'UTC'
   });
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState('');
   const [loading, setLoading] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const { isDarkMode, toggleDarkMode } = useTheme();
   const currentTier = TierManager.getCurrentTier();
@@ -56,6 +64,79 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
     setLoading(false);
   };
 
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      alert('Please fill in all password fields');
+      return;
+    }
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      alert('New passwords do not match');
+      return;
+    }
+    
+    if (passwordForm.newPassword.length < 6) {
+      alert('New password must be at least 6 characters long');
+      return;
+    }
+    
+    setPasswordLoading(true);
+    
+    try {
+      const { data, error } = await auth.updatePassword(passwordForm.newPassword);
+      
+      if (error) {
+        console.error('Password update error:', error)
+        alert(`Error updating password: ${error.message || 'Please try logging in again'}`);
+      } else {
+        console.log('✅ Password updated successfully')
+        alert('Password updated successfully!');
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      }
+    } catch (error) {
+      console.error('Password update error:', error);
+      alert('Error updating password. Please log in again and try.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmation = prompt('Type "DELETE" to confirm account deletion:');
+    
+    if (confirmation !== 'DELETE') {
+      alert('Account deletion cancelled');
+      return;
+    }
+    
+    const finalConfirmation = confirm('This action cannot be undone. Are you absolutely sure you want to delete your account and all data?');
+    
+    if (!finalConfirmation) {
+      return;
+    }
+    
+    try {
+      // Delete all user data
+      await database.deleteAllUserData(user?.id);
+      
+      // Sign out and clear local storage
+      await auth.signOut();
+      localStorage.clear();
+      
+      alert('Account deleted successfully. You will be redirected to the homepage.');
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Account deletion error:', error);
+      alert('Error deleting account. Please contact support.');
+    }
+  };
+
   if (!isOpen) return null;
 
   const tabs = [
@@ -68,6 +149,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
   ];
 
   const handleSave = async () => {
+    // Update currency preference
+    CurrencyManager.setUserCurrency(settings.currency);
+    
     localStorage.setItem('userSettings', JSON.stringify(settings));
     
     // Update user profile in database
@@ -158,6 +242,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
       case 'notifications':
         return (
           <div className="space-y-6">
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Notification System Status</h4>
+              <p className="text-blue-700 dark:text-blue-400 text-sm">
+                ✅ Notifications are working! You'll receive alerts for important events like payments, usage limits, and system updates.
+              </p>
+            </div>
+            
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="font-medium text-slate-800 dark:text-white">Email Notifications</h4>
@@ -184,17 +275,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-slate-800 dark:text-white">Payment Notifications</h4>
-                <p className="text-sm text-slate-600 dark:text-gray-400">Alerts for payments and billing</p>
-              </div>
-              <input
-                type="checkbox"
-                defaultChecked
-                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
                 <h4 className="font-medium text-slate-800 dark:text-white">Usage Alerts</h4>
                 <p className="text-sm text-slate-600 dark:text-gray-400">Notify when approaching limits</p>
               </div>
@@ -212,26 +292,52 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
           <div className="space-y-6">
             <div>
               <h4 className="font-medium text-slate-800 dark:text-white mb-4">Change Password</h4>
-              <div className="space-y-4">
-                <input
-                  type="password"
-                  placeholder="Current password"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-                <input
-                  type="password"
-                  placeholder="New password"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-                <input
-                  type="password"
-                  placeholder="Confirm new password"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  Update Password
+              <form onSubmit={handlePasswordChange} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                    Current Password *
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                    New Password * (min 6 characters)
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    minLength={6}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                    Confirm New Password *
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    required
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {passwordLoading ? 'Updating...' : 'Update Password'}
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         );
@@ -326,7 +432,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
             <div>
               <h4 className="font-medium text-slate-800 dark:text-white mb-4">Data Deletion</h4>
               <p className="text-sm text-slate-600 dark:text-gray-400 mb-4">Permanently delete your account and all data</p>
-              <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+                <h5 className="font-semibold text-red-800 dark:text-red-300 mb-2">⚠️ Warning</h5>
+                <p className="text-red-700 dark:text-red-400 text-sm">
+                  This action will permanently delete your account and all associated data including:
+                </p>
+                <ul className="text-red-700 dark:text-red-400 text-sm mt-2 ml-4 list-disc">
+                  <li>All invoices and financial records</li>
+                  <li>Marketing campaigns and content</li>
+                  <li>Tasks and project data</li>
+                  <li>Portfolio and CRM data</li>
+                  <li>Payment history</li>
+                </ul>
+              </div>
+              <button 
+                onClick={handleDeleteAccount}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
                 Delete Account
               </button>
             </div>
@@ -355,8 +477,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
                 onChange={(e) => setSettings(prev => ({ ...prev, currency: e.target.value }))}
                 className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               >
-                <option value="USD">USD ($)</option>
+                {Object.values(SUPPORTED_CURRENCIES).map(currency => (
+                  <option key={currency.code} value={currency.code}>
+                    {currency.code} ({currency.symbol}) - {currency.name}
+                  </option>
+                ))}
               </select>
+              <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">
+                Display currency for dashboard. Payments are processed in USD.
+              </p>
             </div>
             <div className="flex items-center justify-between">
               <div>

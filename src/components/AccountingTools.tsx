@@ -15,6 +15,7 @@ import {
 import { deepseekAI } from '../lib/deepseek';
 import { database } from '../lib/database';
 import { TierManager } from '../lib/tiers';
+import { CurrencyManager } from '../lib/currency';
 
 const AccountingTools: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState('expense-tracker');
@@ -43,7 +44,6 @@ const AccountingTools: React.FC = () => {
     { id: 'expense-tracker', name: 'Expense Tracker', icon: Calculator, description: 'Track business expenses' },
     { id: 'income-tracker', name: 'Income Tracker', icon: TrendingUp, description: 'Monitor revenue streams' },
     { id: 'financial-reports', name: 'Financial Reports', icon: FileText, description: 'Generate financial reports' },
-    { id: 'tax-calculator', name: 'Tax Calculator', icon: PieChart, description: 'Calculate tax obligations' },
   ];
 
   const expenseCategories = [
@@ -261,6 +261,7 @@ Please provide:
               value={expenseForm.date}
               onChange={(e) => setExpenseForm(prev => ({ ...prev, date: e.target.value }))}
               className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              max={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
@@ -300,7 +301,7 @@ Please provide:
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-red-600">${expense.amount.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-red-600">{CurrencyManager.formatAmount(expense.amount)}</p>
                   {expense.receipt && (
                     <span className="text-xs text-green-600">Receipt ✓</span>
                   )}
@@ -367,6 +368,7 @@ Please provide:
               value={incomeForm.date}
               onChange={(e) => setIncomeForm(prev => ({ ...prev, date: e.target.value }))}
               className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              max={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
@@ -394,7 +396,7 @@ Please provide:
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-green-600">${incomeItem.amount.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-green-600">{CurrencyManager.formatAmount(incomeItem.amount)}</p>
                 </div>
               </div>
             </div>
@@ -419,7 +421,7 @@ Please provide:
                 <TrendingUp className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-800 dark:text-green-300">${totalIncome.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-green-800 dark:text-green-300">{CurrencyManager.formatAmount(totalIncome)}</p>
                 <p className="text-sm text-green-600 dark:text-green-400">Total Income</p>
               </div>
             </div>
@@ -431,7 +433,7 @@ Please provide:
                 <Calculator className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-800 dark:text-red-300">${totalExpenses.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-red-800 dark:text-red-300">{CurrencyManager.formatAmount(totalExpenses)}</p>
                 <p className="text-sm text-red-600 dark:text-red-400">Total Expenses</p>
               </div>
             </div>
@@ -444,7 +446,7 @@ Please provide:
               </div>
               <div>
                 <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-blue-800 dark:text-blue-300' : 'text-orange-800 dark:text-orange-300'}`}>
-                  ${netProfit.toFixed(2)}
+                  {CurrencyManager.formatAmount(netProfit)}
                 </p>
                 <p className={`text-sm ${netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                   Net {netProfit >= 0 ? 'Profit' : 'Loss'}
@@ -552,13 +554,6 @@ Please provide:
           {selectedTool === 'expense-tracker' && renderExpenseTracker()}
           {selectedTool === 'income-tracker' && renderIncomeTracker()}
           {selectedTool === 'financial-reports' && renderFinancialReports()}
-          
-          {selectedTool === 'tax-calculator' && (
-            <div className="text-center py-12">
-              <PieChart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600 dark:text-gray-400">Tax calculator coming soon...</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

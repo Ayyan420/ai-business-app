@@ -8,17 +8,48 @@ import {
   Crown,
   AlertCircle,
   Search,
-  Filter
+  Filter,
+  TrendingUp,
+  Activity,
+  UserX
 } from 'lucide-react';
-import { database, dbFunctions } from '../lib/database';
+import { database } from '../lib/database';
+import { dbFunctions } from '../lib/supabase';
+import { CurrencyManager } from '../lib/currency';
 
 const AdminPanel: React.FC = () => {
+  // Check if user is super admin
+  const isAdmin = () => {
+    const userData = JSON.parse(localStorage.getItem('aiBusinessUser') || '{}');
+    return userData.email === 'admin@example.com' || 
+           userData.email === 'ayyan@digitalsolutions.com' ||
+           userData.email === 'superadmin@aiassistant.com';
+  };
+
+  if (!isAdmin()) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-slate-800 dark:text-white mb-4">Super Admin Access Required</h1>
+          <p className="text-slate-600 dark:text-gray-400">Only super administrators can access this panel.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [users, setUsers] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    totalRevenue: 0,
+    pendingPayments: 0,
+    deletedAccounts: 0
+  });
 
   useEffect(() => {
     loadAdminData();
@@ -44,6 +75,21 @@ const AdminPanel: React.FC = () => {
       if (paymentsResult.data) {
         setPayments(paymentsResult.data);
       }
+      
+      // Calculate stats
+      const totalUsers = usersResult.data?.length || 0;
+      const activeUsers = usersResult.data?.filter(u => u.tier !== 'deleted').length || 0;
+      const totalRevenue = paymentsResult.data?.filter(p => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0) || 0;
+      const pendingPayments = paymentsResult.data?.filter(p => p.status === 'pending').length || 0;
+      const deletedAccounts = usersResult.data?.filter(u => u.tier === 'deleted').length || 0;
+      
+      setStats({
+        totalUsers,
+        activeUsers,
+        totalRevenue,
+        pendingPayments,
+        deletedAccounts
+      });
     } catch (error) {
       console.error('❌ Admin data loading error:', error);
     } finally {
@@ -132,15 +178,27 @@ const AdminPanel: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-gray-700">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
               <Users className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800 dark:text-white">{users.length}</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalUsers}</p>
               <p className="text-sm text-slate-600 dark:text-gray-400">Total Users</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-gray-700">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+              <Activity className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800 dark:text-white">{stats.activeUsers}</p>
+              <p className="text-sm text-slate-600 dark:text-gray-400">Active Users</p>
             </div>
           </div>
         </div>
@@ -151,8 +209,10 @@ const AdminPanel: React.FC = () => {
               <DollarSign className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800 dark:text-white">{payments.length}</p>
-              <p className="text-sm text-slate-600 dark:text-gray-400">Total Payments</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-white">
+                {CurrencyManager.formatAmount(stats.totalRevenue)}
+              </p>
+              <p className="text-sm text-slate-600 dark:text-gray-400">Total Revenue</p>
             </div>
           </div>
         </div>
@@ -164,7 +224,7 @@ const AdminPanel: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                {payments.filter(p => p.status === 'pending').length}
+                {stats.pendingPayments}
               </p>
               <p className="text-sm text-slate-600 dark:text-gray-400">Pending Payments</p>
             </div>
@@ -173,14 +233,14 @@ const AdminPanel: React.FC = () => {
 
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-gray-700">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
-              <Crown className="w-6 h-6 text-purple-600" />
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
+              <UserX className="w-6 h-6 text-red-600" />
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                {users.filter(u => u.tier === 'professional').length}
+                {stats.deletedAccounts}
               </p>
-              <p className="text-sm text-slate-600 dark:text-gray-400">Pro Users</p>
+              <p className="text-sm text-slate-600 dark:text-gray-400">Deleted Accounts</p>
             </div>
           </div>
         </div>
@@ -321,7 +381,7 @@ const AdminPanel: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-4 px-4 font-semibold text-slate-800 dark:text-white">
-                        ${payment.amount}
+                        {CurrencyManager.formatAmount(payment.amount)}
                       </td>
                       <td className="py-4 px-4">
                         <span className={`px-2 py-1 text-xs rounded-full capitalize ${getTierColor(payment.tier)}`}>

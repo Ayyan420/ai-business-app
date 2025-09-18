@@ -19,7 +19,10 @@ import {
   Moon,
   Sun,
   Menu,
-  X
+  X,
+  Shield,
+  CheckSquare,
+  Palette
 } from 'lucide-react';
 import { TierManager, TIERS } from '../lib/tiers';
 import { useTheme } from '../contexts/ThemeContext';
@@ -52,14 +55,27 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'marketing', label: 'Marketing', icon: TrendingUp },
     { id: 'posts', label: 'Post Maker', icon: FileText },
+    { id: 'brand-kit', label: 'Brand Kit', icon: Palette },
+    { id: 'sop-creator', label: 'SOP Creator', icon: FileText },
     { id: 'finance', label: 'Finance', icon: DollarSign },
     { id: 'accounting', label: 'Accounting', icon: Calculator },
     { id: 'strategy', label: 'Strategy', icon: Target },
     { id: 'operations', label: 'Operations', icon: BarChart3 },
     { id: 'portfolio', label: 'Portfolio', icon: Globe },
     { id: 'crm', label: 'CRM & Leads', icon: Users },
+    { id: 'todos', label: 'Todo List', icon: CheckSquare },
   ];
 
+  // Super admin accounts that can access admin panel
+  const isSuperAdmin = user?.email === 'admin@example.com' || 
+                       user?.email === 'ayyan@digitalsolutions.com' ||
+                       user?.email === 'superadmin@aiassistant.com';
+  
+  const adminMenuItems = isSuperAdmin ? [
+    { id: 'admin', label: 'Admin Panel', icon: Shield },
+  ] : [];
+
+  const allMenuItems = [...menuItems, ...adminMenuItems];
   const handleMenuClick = (sectionId: string) => {
     setActiveSection(sectionId);
     if (setSidebarOpen) {
@@ -158,7 +174,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
           
           <nav className="space-y-2">
-            {menuItems.map((item) => {
+            {allMenuItems.map((item) => {
               const IconComponent = item.icon;
               return (
                 <button

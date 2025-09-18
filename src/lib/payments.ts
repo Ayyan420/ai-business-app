@@ -46,13 +46,34 @@ export class PaymentProcessor {
     userDetails: any,
     tierName: string
   ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
-    // In production, this would integrate with actual payment gateways
+    console.log('💳 Processing payment:', { amount, currency, method, tierName })
     
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Validate input parameters
+      if (!amount || amount <= 0) {
+        throw new Error('Invalid payment amount')
+      }
       
-      // For demo purposes, always succeed
+      if (!userDetails || !userDetails.id) {
+        throw new Error('User information is required')
+      }
+      
+      if (!tierName || !['starter', 'professional'].includes(tierName)) {
+        throw new Error('Invalid subscription tier')
+      }
+      
+      // Simulate payment processing with better error handling
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          // Simulate occasional failures for demo
+          if (Math.random() > 0.9) {
+            reject(new Error('Payment gateway temporarily unavailable'))
+          } else {
+            resolve(true)
+          }
+        }, 2000)
+      })
+      
       const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Store payment record
@@ -81,14 +102,16 @@ export class PaymentProcessor {
       userData.tier = tierName;
       localStorage.setItem('aiBusinessUser', JSON.stringify(userData));
       
+      console.log('✅ Payment processed successfully:', transactionId)
       return {
         success: true,
         transactionId
       };
     } catch (error) {
+      console.error('❌ Payment processing failed:', error)
       return {
         success: false,
-        error: 'Payment processing failed. Please try again.'
+        error: error instanceof Error ? error.message : 'Payment processing failed. Please try again.'
       };
     }
   }
