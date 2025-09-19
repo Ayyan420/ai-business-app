@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from "react-dom";
 import { 
   Bell, 
   X, 
@@ -179,8 +180,10 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ user }) => {
       </button>
 
       {/* Notification Dropdown */}
-      {showNotifications && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-slate-200 dark:border-gray-700 z-50">
+      {showNotifications && createPortal(
+        <div className="fixed top-14 right-4 w-80 max-h-[80vh] overflow-y-auto
+                    bg-white dark:bg-gray-800 rounded-xl shadow-2xl
+                    border border-slate-200 dark:border-gray-700 z-[9999]">
           <div className="p-4 border-b border-slate-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-slate-800 dark:text-white">Notifications</h3>
@@ -272,15 +275,8 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ user }) => {
               </div>
             )}
           </div>
-
-          {notifications.length > 0 && (
-            <div className="p-3 border-t border-slate-200 dark:border-gray-700">
-              <button className="w-full text-center text-sm text-blue-600 hover:text-blue-700">
-                View all notifications
-              </button>
-            </div>
-          )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
