@@ -300,7 +300,7 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyInfo> = {
     name: 'Egyptian Pound',
     symbol: 'E£',
     rate: 31.0
-  }
+  },
   ERN: {
     code: 'ERN',
     name: 'Eritrean Nakfa',

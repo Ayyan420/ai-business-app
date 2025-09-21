@@ -347,6 +347,9 @@ export default function InvoiceGenerator() {
   };
 
   const exportAllInvoices = () => {
+    // Implementation for exporting all invoices
+    console.log('Exporting all invoices...');
+  };
 
   if (loading) {
     return (
