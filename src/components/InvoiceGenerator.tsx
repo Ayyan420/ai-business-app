@@ -250,6 +250,104 @@ export default function InvoiceGenerator() {
     return CurrencyManager.formatAmount(amount);
   };
 
+  const generatePDF = async (invoice: any) => {
+    try {
+      const pdf = new jsPDF();
+      
+      // Header
+      pdf.setFontSize(24);
+      pdf.setTextColor(59, 130, 246);
+      pdf.text('INVOICE', 20, 30);
+      
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`Invoice #: ${invoice.invoice_number}`, 20, 45);
+      pdf.text(`Date: ${new Date(invoice.created_at).toLocaleDateString()}`, 20, 55);
+      pdf.text(`Due Date: ${invoice.due_date || 'N/A'}`, 20, 65);
+      
+      // Company Info
+      if (invoice.company_info?.name) {
+        pdf.setFontSize(14);
+        pdf.text('From:', 20, 85);
+        pdf.setFontSize(12);
+        pdf.text(invoice.company_info.name, 20, 95);
+        if (invoice.company_info.address) {
+          const addressLines = invoice.company_info.address.split('\n');
+          addressLines.forEach((line, index) => {
+            pdf.text(line, 20, 105 + (index * 10));
+          });
+        }
+      }
+      
+      // Client Info
+      pdf.setFontSize(14);
+      pdf.text('Bill To:', 120, 85);
+      pdf.setFontSize(12);
+      pdf.text(invoice.client_name, 120, 95);
+      pdf.text(invoice.client_email, 120, 105);
+      if (invoice.client_address) {
+        const clientAddressLines = invoice.client_address.split('\n');
+        clientAddressLines.forEach((line, index) => {
+          pdf.text(line, 120, 115 + (index * 10));
+        });
+      }
+      
+      // Items table
+      let yPos = 140;
+      pdf.setFontSize(14);
+      pdf.text('Items:', 20, yPos);
+      yPos += 15;
+      
+      // Table headers
+      pdf.setFontSize(10);
+      pdf.text('Description', 20, yPos);
+      pdf.text('Qty', 120, yPos);
+      pdf.text('Rate', 140, yPos);
+      pdf.text('Amount', 170, yPos);
+      yPos += 10;
+      
+      // Table items
+      invoice.items?.forEach((item: any) => {
+        pdf.text(item.description.substring(0, 30), 20, yPos);
+        pdf.text(item.quantity.toString(), 120, yPos);
+        pdf.text(`$${item.rate}`, 140, yPos);
+        pdf.text(`$${item.amount}`, 170, yPos);
+        yPos += 10;
+      });
+      
+      // Totals
+      yPos += 10;
+      const subtotal = invoice.items?.reduce((sum: number, item: any) => sum + item.amount, 0) || 0;
+      pdf.text(`Subtotal: $${subtotal.toFixed(2)}`, 140, yPos);
+      yPos += 10;
+      
+      if (invoice.tax_amount && invoice.tax_amount > 0) {
+        pdf.text(`Tax: $${invoice.tax_amount.toFixed(2)}`, 140, yPos);
+        yPos += 10;
+      }
+      
+      pdf.setFontSize(12);
+      pdf.text(`Total: $${invoice.amount?.toFixed(2)}`, 140, yPos);
+      
+      // Notes
+      if (invoice.notes) {
+        yPos += 20;
+        pdf.setFontSize(10);
+        pdf.text('Notes:', 20, yPos);
+        yPos += 10;
+        const noteLines = pdf.splitTextToSize(invoice.notes, 170);
+        pdf.text(noteLines, 20, yPos);
+      }
+      
+      pdf.save(`invoice-${invoice.invoice_number}.pdf`);
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
+
+  const exportAllInvoices = () => {
+
   if (loading) {
     return (
       <div className="p-6">

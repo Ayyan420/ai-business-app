@@ -89,24 +89,19 @@ Amount: $${tier.price.toFixed(2)}`;
       const { data, error } = await database.createPayment(payment);
       
       if (!error && data) {
-        // For demo purposes, immediately approve the payment and upgrade tier
-        await database.updatePaymentStatus(data.id, 'completed');
-        await dbFunctions.updateUserTier(user.id, selectedTier);
-        TierManager.setTier(selectedTier);
-        
-        // Add success notification
+        // Add notification for payment submission
         if ((window as any).addNotification) {
           (window as any).addNotification({
-            type: 'success',
-            title: 'Payment Successful!',
-            message: `Your plan has been upgraded to ${tier.name}. Enjoy unlimited access!`,
+            type: 'info',
+            title: 'Payment Submitted',
+            message: `Your payment for ${tier.name} plan has been submitted for verification. You'll be notified once it's approved.`,
             read: false
           });
         }
         
-        console.log('✅ Payment processed and tier updated successfully')
-        alert(`Payment submitted successfully! Your plan has been upgraded to ${tier.name}.`);
-        window.location.reload();
+        console.log('✅ Payment submitted for verification')
+        alert(`Payment submitted successfully! Your payment will be verified within 24 hours and your plan will be upgraded to ${tier.name}.`);
+        onClose();
       } else {
         console.error('❌ Payment creation failed:', error)
         alert('Error processing payment. Please try again.');

@@ -107,6 +107,16 @@ const AdminPanel: React.FC = () => {
       // Update user tier
       await dbFunctions.updateUserTier(userId, tier);
       
+      // Add notification for user
+      if ((window as any).addNotification) {
+        (window as any).addNotification({
+          type: 'success',
+          title: 'Payment Approved!',
+          message: `Your payment has been approved and your plan has been upgraded to ${tier}.`,
+          read: false
+        });
+      }
+      
       // Refresh data
       loadAdminData();
       
@@ -121,6 +131,17 @@ const AdminPanel: React.FC = () => {
     try {
       console.log('❌ Rejecting payment:', paymentId);
       await database.updatePaymentStatus(paymentId, 'failed');
+      
+      // Add notification for user
+      if ((window as any).addNotification) {
+        (window as any).addNotification({
+          type: 'error',
+          title: 'Payment Rejected',
+          message: 'Your payment has been rejected. Please contact support for assistance.',
+          read: false
+        });
+      }
+      
       loadAdminData();
       alert('Payment rejected successfully!');
     } catch (error) {

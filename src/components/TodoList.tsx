@@ -85,8 +85,8 @@ const TodoList: React.FC = () => {
   };
 
   const handleAddTodo = () => {
-    if (!newTodo.title.trim()) {
-      alert('Please enter a todo title');
+    if (!newTodo.title.trim() || !newTodo.due_date) {
+      alert('Please enter a todo title and due date');
       return;
     }
 
