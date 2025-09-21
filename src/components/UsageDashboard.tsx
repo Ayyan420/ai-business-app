@@ -34,18 +34,61 @@ const UsageDashboard: React.FC = () => {
     { key: 'campaigns', label: 'Campaigns', icon: Crown },
     { key: 'tasks', label: 'Tasks', icon: BarChart3 },
     { key: 'aiQueries', label: 'AI Queries', icon: Zap },
-    { key: 'pdfExports', label: 'PDF Exports', icon: BarChart3 }
+    { key: 'pdfExports', label: 'PDF Exports', icon: BarChart3 },
+    { key: 'storage', label: 'Storage (MB)', icon: BarChart3 }
   ];
+
+  const subscription = TierManager.getSubscription();
+  const daysUntilRenewal = TierManager.getDaysUntilRenewal();
+  const isActive = TierManager.isSubscriptionActive();
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Usage Dashboard</h2>
-        <div className="flex items-center space-x-2">
-          <Crown className="w-5 h-5 text-blue-600" />
-          <span className="text-sm font-medium text-blue-800 dark:text-blue-300">{tierInfo.name} Plan</span>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Crown className="w-5 h-5 text-blue-600" />
+            <span className="text-sm font-medium text-blue-800 dark:text-blue-300">{tierInfo.name} Plan</span>
+          </div>
+          {currentTier !== 'free' && (
+            <div className="text-xs text-slate-500 dark:text-gray-400">
+              {isActive ? `${daysUntilRenewal} days until renewal` : 'Subscription expired'}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Subscription Status */}
+      {currentTier !== 'free' && (
+        <div className={`p-4 rounded-lg border mb-6 ${
+          isActive 
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`font-semibold ${isActive ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
+                Subscription Status: {isActive ? 'Active' : 'Expired'}
+              </h3>
+              <p className={`text-sm ${isActive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                {isActive 
+                  ? `Your ${tierInfo.name} plan renews in ${daysUntilRenewal} days`
+                  : 'Your subscription has expired. Please renew to continue using premium features.'
+                }
+              </p>
+            </div>
+            {!isActive && (
+              <button 
+                onClick={() => setShowUpgradeModal(true)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+              >
+                Renew Now
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {usageItems.map((item) => {

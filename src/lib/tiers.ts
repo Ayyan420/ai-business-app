@@ -6,6 +6,7 @@ export interface TierLimits {
   tasks: number;
   aiQueries: number;
   pdfExports: number;
+  storage: number; // in MB
 }
 
 export interface UserTier {
@@ -25,7 +26,8 @@ export const TIERS: Record<string, UserTier> = {
       campaigns: 1,
       tasks: 10,
       aiQueries: 20,
-      pdfExports: 2
+      pdfExports: 2,
+      storage: 50 // 50MB
     },
     features: [
       'Basic AI content generation',
@@ -43,7 +45,8 @@ export const TIERS: Record<string, UserTier> = {
       campaigns: 10,
       tasks: 100,
       aiQueries: 200,
-      pdfExports: 25
+      pdfExports: 25,
+      storage: 500 // 500MB
     },
     features: [
       'Enhanced AI content generation',
@@ -62,7 +65,8 @@ export const TIERS: Record<string, UserTier> = {
       campaigns: -1,
       tasks: -1,
       aiQueries: -1,
-      pdfExports: -1
+      pdfExports: -1,
+      storage: -1 // Unlimited
     },
     features: [
       'Unlimited everything',
@@ -78,6 +82,7 @@ export const TIERS: Record<string, UserTier> = {
 
 export class TierManager {
   private static STORAGE_KEY = 'userTierUsage';
+  private static SUBSCRIPTION_KEY = 'userSubscription';
 
   // Async: check DB, fallback to localStorage
   static async getCurrentTier(): Promise<string> {
@@ -102,12 +107,24 @@ export class TierManager {
 
   static async setTier(tier: string) {
     localStorage.setItem('userTier', tier);
+    
+    // Update subscription info
+    const subscription = {
+      tier,
+      status: 'active',
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    localStorage.setItem(this.SUBSCRIPTION_KEY, JSON.stringify(subscription));
+    
     try {
       const { auth } = await import('./supabase');
       const { data: { user } } = await auth.getUser();
       if (user) {
         const { database } = await import('./database');
         await database.updateUserProfile(user.id, { tier });
+        await database.updateSubscription(subscription);
       }
     } catch (error) {
       console.log('Database update failed, tier saved locally');
@@ -157,5 +174,31 @@ export class TierManager {
   static resetMonthlyUsage() {
     localStorage.removeItem(this.STORAGE_KEY);
     console.log('🔄 Monthly usage reset');
+  }
+
+  static getSubscription() {
+    const subscription = localStorage.getItem(this.SUBSCRIPTION_KEY);
+    return subscription ? JSON.parse(subscription) : {
+      tier: 'free',
+      status: 'active',
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    };
+  }
+
+  static isSubscriptionActive(): boolean {
+    const subscription = this.getSubscription();
+    const now = new Date();
+    const endDate = new Date(subscription.current_period_end);
+    
+    return subscription.status === 'active' && endDate > now;
+  }
+
+  static getDaysUntilRenewal(): number {
+    const subscription = this.getSubscription();
+    const now = new Date();
+    const endDate = new Date(subscription.current_period_end);
+    const diffTime = endDate.getTime() - now.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 }

@@ -24,6 +24,7 @@ const AccountingTools: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [aiInsights, setAiInsights] = useState('');
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+  const [financialSummary, setFinancialSummary] = useState<any>(null);
 
   const [expenseForm, setExpenseForm] = useState({
     description: '',
@@ -67,37 +68,61 @@ const AccountingTools: React.FC = () => {
 
   useEffect(() => {
     loadFinancialData();
+    loadFinancialSummary();
   }, []);
 
   const loadFinancialData = async () => {
-    // Load expenses and income from localStorage for demo
-    const savedExpenses = localStorage.getItem('expenses');
-    const savedIncome = localStorage.getItem('income');
-    
-    if (savedExpenses) {
-      setExpenses(JSON.parse(savedExpenses));
-    }
-    if (savedIncome) {
-      setIncome(JSON.parse(savedIncome));
+    setLoading(true);
+    try {
+      const [expensesResult, incomeResult] = await Promise.all([
+        database.getExpenses(),
+        database.getIncome()
+      ]);
+      
+      if (!expensesResult.error && expensesResult.data) {
+        setExpenses(expensesResult.data);
+      }
+      
+      if (!incomeResult.error && incomeResult.data) {
+        setIncome(incomeResult.data);
+      }
+    } catch (error) {
+      console.error('Error loading financial data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const addExpense = () => {
+  const loadFinancialSummary = async () => {
+    try {
+      const { data, error } = await database.getFinancialSummary();
+      if (!error && data) {
+        setFinancialSummary(data);
+      }
+    } catch (error) {
+      console.error('Error loading financial summary:', error);
+    }
+  };
+
+  const addExpense = async () => {
     if (!expenseForm.description || !expenseForm.amount) {
       alert('Please fill in description and amount');
       return;
     }
 
-    const newExpense = {
-      id: Date.now().toString(),
+    const expenseData = {
       ...expenseForm,
       amount: parseFloat(expenseForm.amount),
-      createdAt: new Date().toISOString()
+      has_receipt: expenseForm.receipt
     };
 
-    const updatedExpenses = [...expenses, newExpense];
-    setExpenses(updatedExpenses);
-    localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
+    const { data, error } = await database.createExpense(expenseData);
+    if (!error && data) {
+      setExpenses(prev => [data, ...prev]);
+      loadFinancialSummary(); // Refresh summary
+    } else {
+      alert('Error adding expense. Please try again.');
+    }
     
     setExpenseForm({
       description: '',
@@ -108,22 +133,24 @@ const AccountingTools: React.FC = () => {
     });
   };
 
-  const addIncome = () => {
+  const addIncome = async () => {
     if (!incomeForm.description || !incomeForm.amount || !incomeForm.date) {
       alert('Please fill in description, amount, and date');
       return;
     }
 
-    const newIncome = {
-      id: Date.now().toString(),
+    const incomeData = {
       ...incomeForm,
-      amount: parseFloat(incomeForm.amount),
-      createdAt: new Date().toISOString()
+      amount: parseFloat(incomeForm.amount)
     };
 
-    const updatedIncome = [...income, newIncome];
-    setIncome(updatedIncome);
-    localStorage.setItem('income', JSON.stringify(updatedIncome));
+    const { data, error } = await database.createIncome(incomeData);
+    if (!error && data) {
+      setIncome(prev => [data, ...prev]);
+      loadFinancialSummary(); // Refresh summary
+    } else {
+      alert('Error adding income. Please try again.');
+    }
     
     setIncomeForm({
       description: '',
@@ -142,23 +169,27 @@ const AccountingTools: React.FC = () => {
     setIsGeneratingInsights(true);
 
     try {
-      const totalIncome = income.reduce((sum, item) => sum + item.amount, 0);
-      const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
-      const netProfit = totalIncome - totalExpenses;
-
-      const expensesByCategory = expenses.reduce((acc, expense) => {
-        acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
-        return acc;
-      }, {});
+      // Use financial summary data
+      const summary = financialSummary || {
+        total_income: income.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0),
+        total_expenses: expenses.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0),
+        expense_categories: {},
+        income_sources: {}
+      };
+      
+      const netProfit = summary.total_income - summary.total_expenses;
 
       const prompt = `Analyze this business financial data and provide insights:
 
-Total Income: $${totalIncome}
-Total Expenses: $${totalExpenses}
+Total Income: $${summary.total_income}
+Total Expenses: $${summary.total_expenses}
 Net Profit: $${netProfit}
 
 Expenses by Category:
-${Object.entries(expensesByCategory).map(([cat, amount]) => `- ${cat}: $${amount}`).join('\n')}
+${Object.entries(summary.expense_categories || {}).map(([cat, amount]) => `- ${cat}: $${amount}`).join('\n')}
+
+Income by Source:
+${Object.entries(summary.income_sources || {}).map(([source, amount]) => `- ${source}: $${amount}`).join('\n')}
 
 Recent Transactions: ${expenses.length + income.length}
 
@@ -407,9 +438,13 @@ Please provide:
   );
 
   const renderFinancialReports = () => {
-    const totalIncome = income.reduce((sum, item) => sum + item.amount, 0);
-    const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
-    const netProfit = totalIncome - totalExpenses;
+    const summary = financialSummary || {
+      total_income: income.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0),
+      total_expenses: expenses.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0),
+      net_profit: 0,
+      expense_categories: {},
+      income_sources: {}
+    };
 
     return (
       <div className="space-y-6">
@@ -421,7 +456,7 @@ Please provide:
                 <TrendingUp className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-800 dark:text-green-300">{CurrencyManager.formatAmount(totalIncome)}</p>
+                <p className="text-2xl font-bold text-green-800 dark:text-green-300">{CurrencyManager.formatAmount(summary.total_income)}</p>
                 <p className="text-sm text-green-600 dark:text-green-400">Total Income</p>
               </div>
             </div>
@@ -433,25 +468,56 @@ Please provide:
                 <Calculator className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-800 dark:text-red-300">{CurrencyManager.formatAmount(totalExpenses)}</p>
+                <p className="text-2xl font-bold text-red-800 dark:text-red-300">{CurrencyManager.formatAmount(summary.total_expenses)}</p>
                 <p className="text-sm text-red-600 dark:text-red-400">Total Expenses</p>
               </div>
             </div>
           </div>
 
-          <div className={`${netProfit >= 0 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'} rounded-lg p-6 border`}>
+          <div className={`${summary.net_profit >= 0 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'} rounded-lg p-6 border`}>
             <div className="flex items-center space-x-3">
-              <div className={`w-12 h-12 ${netProfit >= 0 ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-orange-100 dark:bg-orange-900/40'} rounded-lg flex items-center justify-center`}>
-                <DollarSign className={`w-6 h-6 ${netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+              <div className={`w-12 h-12 ${summary.net_profit >= 0 ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-orange-100 dark:bg-orange-900/40'} rounded-lg flex items-center justify-center`}>
+                <DollarSign className={`w-6 h-6 ${summary.net_profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
               </div>
               <div>
-                <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-blue-800 dark:text-blue-300' : 'text-orange-800 dark:text-orange-300'}`}>
-                  {CurrencyManager.formatAmount(netProfit)}
+                <p className={`text-2xl font-bold ${summary.net_profit >= 0 ? 'text-blue-800 dark:text-blue-300' : 'text-orange-800 dark:text-orange-300'}`}>
+                  {CurrencyManager.formatAmount(summary.net_profit)}
                 </p>
-                <p className={`text-sm ${netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                  Net {netProfit >= 0 ? 'Profit' : 'Loss'}
+                <p className={`text-sm ${summary.net_profit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                  Net {summary.net_profit >= 0 ? 'Profit' : 'Loss'}
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Category Breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-slate-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Expenses by Category</h3>
+            <div className="space-y-3">
+              {Object.entries(summary.expense_categories || {}).map(([category, amount]) => (
+                <div key={category} className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-gray-400 capitalize">{category}</span>
+                  <span className="font-semibold text-slate-800 dark:text-white">
+                    {CurrencyManager.formatAmount(amount as number)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-slate-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Income by Source</h3>
+            <div className="space-y-3">
+              {Object.entries(summary.income_sources || {}).map(([source, amount]) => (
+                <div key={source} className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-gray-400 capitalize">{source}</span>
+                  <span className="font-semibold text-slate-800 dark:text-white">
+                    {CurrencyManager.formatAmount(amount as number)}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -1031,6 +1031,383 @@ export const database = {
     }
   },
 
+  // Expenses
+  async getExpenses(userId?: string) {
+    if (isDemoMode) {
+      const savedExpenses = localStorage.getItem('expenses');
+      return { data: savedExpenses ? JSON.parse(savedExpenses) : [], error: null };
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: [], error: 'Not authenticated' };
+      }
+      
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+      
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('❌ Get expenses error:', error);
+      return { data: [], error };
+    }
+  },
+
+  async createExpense(expense: any) {
+    if (isDemoMode) {
+      const newExpense = { 
+        ...expense, 
+        id: Date.now().toString(), 
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+      expenses.unshift(newExpense);
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+      return { data: newExpense, error: null };
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: 'User not authenticated' };
+      }
+      
+      const expenseData = {
+        ...expense,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert(expenseData)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('❌ Create expense error:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Income
+  async getIncome(userId?: string) {
+    if (isDemoMode) {
+      const savedIncome = localStorage.getItem('income');
+      return { data: savedIncome ? JSON.parse(savedIncome) : [], error: null };
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: [], error: 'Not authenticated' };
+      }
+      
+      const { data, error } = await supabase
+        .from('income')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+      
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('❌ Get income error:', error);
+      return { data: [], error };
+    }
+  },
+
+  async createIncome(income: any) {
+    if (isDemoMode) {
+      const newIncome = { 
+        ...income, 
+        id: Date.now().toString(), 
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      const incomeList = JSON.parse(localStorage.getItem('income') || '[]');
+      incomeList.unshift(newIncome);
+      localStorage.setItem('income', JSON.stringify(incomeList));
+      return { data: newIncome, error: null };
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: 'User not authenticated' };
+      }
+      
+      const incomeData = {
+        ...income,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
+        .from('income')
+        .insert(incomeData)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('❌ Create income error:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Financial Reports
+  async getFinancialSummary(startDate?: string, endDate?: string) {
+    if (isDemoMode) {
+      const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+      const income = JSON.parse(localStorage.getItem('income') || '[]');
+      
+      const totalExpenses = expenses.reduce((sum: number, exp: any) => sum + parseFloat(exp.amount || 0), 0);
+      const totalIncome = income.reduce((sum: number, inc: any) => sum + parseFloat(inc.amount || 0), 0);
+      
+      const expensesByCategory = expenses.reduce((acc: any, exp: any) => {
+        acc[exp.category] = (acc[exp.category] || 0) + parseFloat(exp.amount || 0);
+        return acc;
+      }, {});
+      
+      const incomeBySource = income.reduce((acc: any, inc: any) => {
+        acc[inc.source] = (acc[inc.source] || 0) + parseFloat(inc.amount || 0);
+        return acc;
+      }, {});
+      
+      return {
+        data: {
+          total_income: totalIncome,
+          total_expenses: totalExpenses,
+          net_profit: totalIncome - totalExpenses,
+          expense_categories: expensesByCategory,
+          income_sources: incomeBySource
+        },
+        error: null
+      };
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: 'Not authenticated' };
+      }
+      
+      const { data, error } = await supabase.rpc('get_financial_summary', {
+        p_user_id: user.id,
+        p_start_date: startDate || null,
+        p_end_date: endDate || null
+      });
+      
+      return { data: data?.[0] || null, error };
+    } catch (error) {
+      console.error('❌ Get financial summary error:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Budgets
+  async getBudgets(userId?: string) {
+    if (isDemoMode) {
+      const savedBudgets = localStorage.getItem('budgets');
+      return { data: savedBudgets ? JSON.parse(savedBudgets) : [], error: null };
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: [], error: 'Not authenticated' };
+      }
+      
+      const { data, error } = await supabase
+        .from('budgets')
+        .select(`
+          *,
+          budget_categories (*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('❌ Get budgets error:', error);
+      return { data: [], error };
+    }
+  },
+
+  async createBudget(budget: any) {
+    if (isDemoMode) {
+      const newBudget = { 
+        ...budget, 
+        id: Date.now().toString(), 
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      const budgets = JSON.parse(localStorage.getItem('budgets') || '[]');
+      budgets.unshift(newBudget);
+      localStorage.setItem('budgets', JSON.stringify(budgets));
+      return { data: newBudget, error: null };
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: 'User not authenticated' };
+      }
+      
+      const budgetData = {
+        ...budget,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
+        .from('budgets')
+        .insert(budgetData)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('❌ Create budget error:', error);
+      return { data: null, error };
+    }
+  },
+
+  // File uploads
+  async uploadFile(file: File, uploadType: string) {
+    if (isDemoMode) {
+      // Convert to base64 for demo
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const fileRecord = {
+            id: Date.now().toString(),
+            file_name: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            file_url: reader.result as string,
+            upload_type: uploadType,
+            created_at: new Date().toISOString()
+          };
+          resolve({ data: fileRecord, error: null });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: 'User not authenticated' };
+      }
+      
+      // Upload file to Supabase Storage
+      const fileName = `${user.id}/${uploadType}/${Date.now()}-${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('uploads')
+        .upload(fileName, file);
+      
+      if (uploadError) {
+        return { data: null, error: uploadError };
+      }
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('uploads')
+        .getPublicUrl(fileName);
+      
+      // Save file record
+      const fileRecord = {
+        user_id: user.id,
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size,
+        file_url: publicUrl,
+        upload_type: uploadType
+      };
+      
+      const { data, error } = await supabase
+        .from('file_uploads')
+        .insert(fileRecord)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('❌ Upload file error:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Subscription management
+  async getSubscription(userId?: string) {
+    if (isDemoMode) {
+      const tier = localStorage.getItem('userTier') || 'free';
+      return {
+        data: {
+          tier,
+          status: 'active',
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        error: null
+      };
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: 'Not authenticated' };
+      }
+      
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error('❌ Get subscription error:', error);
+      return { data: null, error };
+    }
+  },
+
+  async updateSubscription(subscriptionData: any) {
+    if (isDemoMode) {
+      localStorage.setItem('userTier', subscriptionData.tier);
+      return { data: subscriptionData, error: null };
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: 'User not authenticated' };
+      }
+      
+      const { data, error } = await supabase.rpc('update_user_subscription', {
+        p_user_id: user.id,
+        p_tier: subscriptionData.tier,
+        p_period_start: subscriptionData.current_period_start,
+        p_period_end: subscriptionData.current_period_end
+      });
+      
+      return { data, error };
+    } catch (error) {
+      console.error('❌ Update subscription error:', error);
+      return { data: null, error };
+    }
+  },
+
   // Stats (removed team_members)
   async getStats(userId?: string) {
     if (isDemoMode) {

@@ -20,6 +20,14 @@ const FinanceTools: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState('invoice');
   const [savedInvoices, setSavedInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [budgets, setBudgets] = useState<any[]>([]);
+  const [forecastData, setForecastData] = useState<any>(null);
+  const [forecastForm, setForecastForm] = useState({
+    currentRevenue: '',
+    growthRate: '',
+    period: '',
+    businessType: ''
+  });
   const [budgetData, setBudgetData] = useState({
     totalBudget: 10000,
     categories: [
@@ -32,6 +40,7 @@ const FinanceTools: React.FC = () => {
 
   useEffect(() => {
     loadInvoices();
+    loadBudgets();
   }, []);
 
   const loadInvoices = async () => {
@@ -41,6 +50,43 @@ const FinanceTools: React.FC = () => {
       setSavedInvoices(data);
     }
     setLoading(false);
+  };
+
+  const loadBudgets = async () => {
+    const { data, error } = await database.getBudgets();
+    if (!error && data) {
+      setBudgets(data);
+    }
+  };
+
+  const generateForecast = async () => {
+    if (!forecastForm.currentRevenue || !forecastForm.growthRate || !forecastForm.period) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    const currentRev = parseFloat(forecastForm.currentRevenue);
+    const growthRate = parseFloat(forecastForm.growthRate) / 100;
+    const months = parseInt(forecastForm.period);
+
+    const forecast = [];
+    for (let i = 1; i <= months; i++) {
+      const monthlyGrowth = Math.pow(1 + growthRate / 12, i);
+      const projectedRevenue = currentRev * monthlyGrowth;
+      
+      forecast.push({
+        month: i,
+        monthName: new Date(2024, i - 1, 1).toLocaleDateString('en-US', { month: 'long' }),
+        revenue: projectedRevenue,
+        growth: ((projectedRevenue - currentRev) / currentRev * 100).toFixed(1)
+      });
+    }
+
+    setForecastData({
+      forecast,
+      totalGrowth: ((forecast[forecast.length - 1].revenue - currentRev) / currentRev * 100).toFixed(1),
+      businessType: forecastForm.businessType
+    });
   };
 
   const handleSaveInvoice = async (invoice: any) => {
@@ -86,31 +132,131 @@ const FinanceTools: React.FC = () => {
 
   const renderBudgetPlanner = () => (
     <div className="space-y-6">
-      {/* Budget Creation Form */}
+      <div className="text-center py-8">
+        <Calculator className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+        <p className="text-slate-600 dark:text-gray-400">Budget Planner will be available soon</p>
+        <p className="text-sm text-slate-500 dark:text-gray-500">Use the Accounting Tools for expense and income tracking</p>
+      </div>
+    </div>
+  );
+
+  const renderForecast = () => (
+    <div className="space-y-6">
       <div className="bg-slate-50 dark:bg-gray-700 rounded-lg p-6 border dark:border-gray-600">
-        <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Create New Budget</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Financial Forecast Input</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-              Budget Name *
+              Current Monthly Revenue *
             </label>
             <input
-              type="text"
-              placeholder="e.g., Marketing Q1 2024"
+              type="number"
+              value={forecastForm.currentRevenue}
+              onChange={(e) => setForecastForm(prev => ({ ...prev, currentRevenue: e.target.value }))}
+              placeholder="5000"
               className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
               required
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-              Total Amount *
+              Expected Growth Rate (%) *
             </label>
             <input
               type="number"
-              placeholder="10000"
+              value={forecastForm.growthRate}
+              onChange={(e) => setForecastForm(prev => ({ ...prev, growthRate: e.target.value }))}
+              placeholder="10"
               className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
               required
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+              Forecast Period *
+            </label>
+            <select 
+              value={forecastForm.period}
+              onChange={(e) => setForecastForm(prev => ({ ...prev, period: e.target.value }))}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
+              required
+            >
+              <option value="">Select Period</option>
+              <option value="6">6 Months</option>
+              <option value="12">12 Months</option>
+              <option value="24">24 Months</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+              Business Type *
+            </label>
+            <select 
+              value={forecastForm.businessType}
+              onChange={(e) => setForecastForm(prev => ({ ...prev, businessType: e.target.value }))}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white" 
+              required
+            >
+              <option value="">Select Type</option>
+              <option value="saas">SaaS</option>
+              <option value="ecommerce">E-commerce</option>
+              <option value="service">Service Business</option>
+              <option value="retail">Retail</option>
+            </select>
+          </div>
+        </div>
+        <button 
+          onClick={generateForecast}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Generate Forecast
+        </button>
+      </div>
+      
+      {forecastData && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-slate-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">
+            {forecastForm.period}-Month Revenue Forecast
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {forecastData.forecast.map((month: any) => (
+              <div key={month.month} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-gray-700 rounded">
+                <span className="font-medium text-slate-800 dark:text-white">{month.monthName}</span>
+                <div className="text-right">
+                  <span className="text-green-600 font-bold">
+                    {CurrencyManager.formatAmount(month.revenue)}
+                  </span>
+                  <div className="text-xs text-slate-500">+{month.growth}%</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <p className="text-green-800 dark:text-green-300 font-semibold">
+              Total projected growth: {forecastData.totalGrowth}% over {forecastForm.period} months
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderReports = () => (
+    <div className="space-y-6">
+      <div className="bg-slate-50 dark:bg-gray-700 rounded-lg p-6 border dark:border-gray-600">
+        <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Generate Financial Report</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+              Report Type *
+            </label>
+            <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white" required>
+              <option value="">Select Report Type</option>
+              <option value="income">Income Statement</option>
+              <option value="balance">Balance Sheet</option>
+              <option value="cashflow">Cash Flow</option>
+              <option value="summary">Financial Summary</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
@@ -118,86 +264,52 @@ const FinanceTools: React.FC = () => {
             </label>
             <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white" required>
               <option value="">Select Period</option>
-              <option value="monthly">Monthly</option>
-              <option value="quarterly">Quarterly</option>
-              <option value="yearly">Yearly</option>
+              <option value="monthly">This Month</option>
+              <option value="quarterly">This Quarter</option>
+              <option value="yearly">This Year</option>
+              <option value="custom">Custom Range</option>
             </select>
           </div>
         </div>
-        <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-          Create Budget
+        <button 
+          onClick={() => alert('Report generation will be implemented with real data from database')}
+          className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          Generate Report
         </button>
       </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-slate-50 rounded-lg p-6 border">
-          <h3 className="font-semibold text-slate-800 mb-4">Budget Overview</h3>
-          <div className="space-y-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-slate-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Revenue Summary</h3>
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-slate-600">Total Budget:</span>
-              <span className="font-bold text-slate-800">${budgetData.totalBudget.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600">Total Spent:</span>
-              <span className="font-bold text-red-600">
-                ${budgetData.categories.reduce((sum, cat) => sum + cat.spent, 0).toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600">Remaining:</span>
+              <span className="text-slate-600 dark:text-gray-400">Total Revenue</span>
               <span className="font-bold text-green-600">
-                ${(budgetData.totalBudget - budgetData.categories.reduce((sum, cat) => sum + cat.spent, 0)).toLocaleString()}
+                {CurrencyManager.formatAmount(savedInvoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.amount || 0), 0))}
               </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600 dark:text-gray-400">Pending Invoices</span>
+              <span className="font-bold text-yellow-600">
+                {CurrencyManager.formatAmount(savedInvoices.filter(inv => inv.status === 'sent').reduce((sum, inv) => sum + (inv.amount || 0), 0))}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600 dark:text-gray-400">Total Invoices</span>
+              <span className="font-bold text-blue-600">{savedInvoices.length}</span>
             </div>
           </div>
         </div>
         
-        <div className="bg-slate-50 rounded-lg p-6 border">
-          <h3 className="font-semibold text-slate-800 mb-4">Budget Utilization</h3>
-          <div className="w-full bg-slate-200 rounded-full h-4">
-            <div 
-              className="bg-gradient-to-r from-green-500 to-blue-500 h-4 rounded-full transition-all duration-300"
-              style={{ 
-                width: `${(budgetData.categories.reduce((sum, cat) => sum + cat.spent, 0) / budgetData.totalBudget) * 100}%` 
-              }}
-            ></div>
-          </div>
-          <p className="text-sm text-slate-600 mt-2">
-            {((budgetData.categories.reduce((sum, cat) => sum + cat.spent, 0) / budgetData.totalBudget) * 100).toFixed(1)}% of budget used
-          </p>
-        </div>
-      </div>
-      
-      <div>
-        <h3 className="font-semibold text-slate-800 mb-4">Category Breakdown</h3>
-        <div className="space-y-4">
-          {budgetData.categories.map((category, index) => (
-            <div key={index} className="p-4 bg-slate-50 rounded-lg border">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-slate-800">{category.name}</span>
-                <span className="text-sm text-slate-600">
-                  ${category.spent.toLocaleString()} / ${category.allocated.toLocaleString()}
-                </span>
-              </div>
-              <div className="w-full bg-slate-200 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    (category.spent / category.allocated) > 0.9 ? 'bg-red-500' :
-                    (category.spent / category.allocated) > 0.7 ? 'bg-yellow-500' : 'bg-green-500'
-                  }`}
-                  style={{ width: `${Math.min((category.spent / category.allocated) * 100, 100)}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between items-center mt-1">
-                <span className="text-xs text-slate-500">
-                  {((category.spent / category.allocated) * 100).toFixed(1)}% used
-                </span>
-                <span className="text-xs text-slate-500">
-                  ${(category.allocated - category.spent).toLocaleString()} remaining
-                </span>
-              </div>
-            </div>
-          ))}
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-6 border border-green-200 dark:border-green-800">
+          <h3 className="text-lg font-semibold text-green-800 dark:text-green-300 mb-4">📊 Financial Insights</h3>
+          <ul className="space-y-2 text-green-700 dark:text-green-400 text-sm">
+            <li>• {savedInvoices.filter(inv => inv.status === 'paid').length} invoices paid this month</li>
+            <li>• {savedInvoices.filter(inv => inv.status === 'sent').length} invoices pending payment</li>
+            <li>• Average invoice value: {CurrencyManager.formatAmount(savedInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0) / Math.max(savedInvoices.length, 1))}</li>
+            <li>• Payment rate: {savedInvoices.length > 0 ? Math.round((savedInvoices.filter(inv => inv.status === 'paid').length / savedInvoices.length) * 100) : 0}%</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -249,151 +361,8 @@ const FinanceTools: React.FC = () => {
           
           {selectedTool === 'invoice' && <InvoiceGenerator onSave={handleSaveInvoice} />}
           {selectedTool === 'budget' && renderBudgetPlanner()}
-          
-          {selectedTool === 'forecast' && (
-            <div className="space-y-6">
-              <div className="bg-slate-50 dark:bg-gray-700 rounded-lg p-6 border dark:border-gray-600">
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Financial Forecast Input</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Current Monthly Revenue *
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="5000"
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Expected Growth Rate (%) *
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="10"
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Forecast Period *
-                    </label>
-                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white" required>
-                      <option value="">Select Period</option>
-                      <option value="6">6 Months</option>
-                      <option value="12">12 Months</option>
-                      <option value="24">24 Months</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Business Type *
-                    </label>
-                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white" required>
-                      <option value="">Select Type</option>
-                      <option value="saas">SaaS</option>
-                      <option value="ecommerce">E-commerce</option>
-                      <option value="service">Service Business</option>
-                      <option value="retail">Retail</option>
-                    </select>
-                  </div>
-                </div>
-                <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  Generate Forecast
-                </button>
-              </div>
-              
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-slate-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">12-Month Revenue Forecast</h3>
-                <div className="space-y-3">
-                  {Array.from({ length: 12 }, (_, i) => {
-                    const month = new Date(2024, i, 1).toLocaleDateString('en-US', { month: 'long' });
-                    const revenue = 5000 * Math.pow(1.1, i);
-                    return (
-                      <div key={i} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-gray-700 rounded">
-                        <span className="font-medium text-slate-800 dark:text-white">{month} 2024</span>
-                        <span className="text-green-600 font-bold">${revenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {selectedTool === 'reports' && (
-            <div className="space-y-6">
-              <div className="bg-slate-50 dark:bg-gray-700 rounded-lg p-6 border dark:border-gray-600">
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Generate Financial Report</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Report Type *
-                    </label>
-                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white" required>
-                      <option value="">Select Report Type</option>
-                      <option value="income">Income Statement</option>
-                      <option value="balance">Balance Sheet</option>
-                      <option value="cashflow">Cash Flow</option>
-                      <option value="summary">Financial Summary</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
-                      Period *
-                    </label>
-                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white" required>
-                      <option value="">Select Period</option>
-                      <option value="monthly">This Month</option>
-                      <option value="quarterly">This Quarter</option>
-                      <option value="yearly">This Year</option>
-                      <option value="custom">Custom Range</option>
-                    </select>
-                  </div>
-                </div>
-                <button className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                  Generate Report
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-slate-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Revenue Summary</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-gray-400">Total Revenue</span>
-                      <span className="font-bold text-green-600">$12,500</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-gray-400">Total Expenses</span>
-                      <span className="font-bold text-red-600">$8,200</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-gray-400">Net Profit</span>
-                      <span className="font-bold text-blue-600">$4,300</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-gray-400">Profit Margin</span>
-                      <span className="font-bold text-purple-600">34.4%</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-6 border border-green-200 dark:border-green-800">
-                  <h3 className="text-lg font-semibold text-green-800 dark:text-green-300 mb-4">📊 Financial Insights</h3>
-                  <ul className="space-y-2 text-green-700 dark:text-green-400 text-sm">
-                    <li>• Revenue increased 15% compared to last month</li>
-                    <li>• Profit margin is healthy at 34.4%</li>
-                    <li>• Consider investing surplus in growth initiatives</li>
-                    <li>• Cash flow is positive and stable</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
+          {selectedTool === 'forecast' && renderForecast()}
+          {selectedTool === 'reports' && renderReports()}
         </div>
       </div>
 
