@@ -97,8 +97,10 @@ const FinanceTools: React.FC = () => {
       setSavedInvoices(prev => [data, ...prev]);
       console.log('✅ Invoice saved successfully');
       alert('Invoice saved successfully!');
-      console.error('❌ Failed to save invoice:', error);
-      alert(`Failed to save invoice: ${error?.message || 'Please try again.'}`);
+      if(error){
+        console.error('❌ Failed to save invoice:', error);
+        alert(`Failed to save invoice: ${error?.message || 'Please try again.'}`);
+      }
     }
   };
 

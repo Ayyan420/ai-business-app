@@ -35,8 +35,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
   const [passwordLoading, setPasswordLoading] = useState(false);
 
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const currentTier = TierManager.getCurrentTier();
-  const tierInfo = TIERS[currentTier];
+  const [currentTier, setCurrentTier] = React.useState('free');
+  const [tierInfo, setTierInfo] = React.useState(TIERS.free);
+  const [usage, setUsage] = React.useState({ contentGenerations: 0, invoices: 0, aiQueries: 0 });
+  
+  useEffect(() => {
+    const loadTier = async () => {
+      try {
+        const tier = await TierManager.getCurrentTier();
+        const info = TIERS[tier];
+        const currentUsage = TierManager.getUsage();
+        setCurrentTier(tier);
+        setTierInfo(info);
+        setUsage(currentUsage);
+      } catch (error) {
+        console.error('Error loading tier:', error);
+        // Keep default values
+      }
+    };
+    loadTier();
+  }, [user]);
 
   useEffect(() => {
     if (isOpen) {

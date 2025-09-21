@@ -1,4 +1,6 @@
 // Updated tier management system with new pricing
+import { CurrencyManager, SUPPORTED_CURRENCIES } from './currency';
+
 export interface TierLimits {
   contentGenerations: number;
   invoices: number;
@@ -92,6 +94,8 @@ export class TierManager {
 
       if (profile?.tier) {
         localStorage.setItem('userTier', profile.tier);
+        CurrencyManager.setUserCurrency(profile.currency);
+        localStorage.setItem('userSettings', JSON.stringify(profile.settings));
         return profile.tier;
       }
     } catch (error) {
