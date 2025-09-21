@@ -152,16 +152,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
     // Update currency preference
     CurrencyManager.setUserCurrency(settings.currency);
     
-    localStorage.setItem('userSettings', JSON.stringify(settings));
-    
-    // Update user profile in database
+    // Save currency to database
     if (user) {
       await database.updateUserProfile(user.id, {
-        name: user.name,
-        email: user.email,
+        currency: settings.currency,
         settings: settings
       });
     }
+    
+    localStorage.setItem('userSettings', JSON.stringify(settings));
     
     alert('Settings saved successfully!');
     onClose();

@@ -52,6 +52,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   const tierInfo = TIERS[currentTier];
   const usage = TierManager.getUsage();
   
+  useEffect(() => {
+    const loadTier = async () => {
+      const tier = await TierManager.getCurrentTier();
+      setCurrentTier(tier);
+    };
+    loadTier();
+  }, [user]);
+  
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'marketing', label: 'Marketing', icon: TrendingUp },

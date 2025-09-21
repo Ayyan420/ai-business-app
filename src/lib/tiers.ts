@@ -79,12 +79,38 @@ export const TIERS: Record<string, UserTier> = {
 export class TierManager {
   private static STORAGE_KEY = 'userTierUsage';
 
-  static getCurrentTier(): string {
+  static async getCurrentTier(): Promise<string> {
+    try {
+      // First try to get from database
+      const { data: profile } = await import('./database').then(db => db.database.getCurrentUser());
+      if (profile?.data?.tier) {
+        // Sync with localStorage for offline access
+        localStorage.setItem('userTier', profile.data.tier);
+        return profile.data.tier;
+      }
+    } catch (error) {
+      console.log('Database not available, using localStorage');
+    }
+    
+    // Fallback to localStorage
     return localStorage.getItem('userTier') || 'free';
   }
 
-  static setTier(tier: string) {
+  static async setTier(tier: string) {
     localStorage.setItem('userTier', tier);
+    
+    try {
+      // Update in database
+      const { auth } = await import('./supabase');
+      const { data: { user } } = await auth.getUser();
+      if (user) {
+        const { database } = await import('./database');
+        await database.updateUserProfile(user.id, { tier });
+      }
+    } catch (error) {
+      console.log('Database update failed, tier saved locally');
+    }
+    
     console.log('🎯 Tier updated to:', tier);
   }
 
