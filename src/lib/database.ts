@@ -484,7 +484,7 @@ export const database = {
       
       if (!portfolio && slug) {
         // Only create demo portfolio for demo-specific slugs
-        if (slug.includes('demo') || slug.includes('sample')) {
+        if (slug.includes('demo') || slug.includes('sample') || slug.includes('test')) {
         portfolio = {
           id: 'demo-portfolio',
           user_id: 'demo-user',

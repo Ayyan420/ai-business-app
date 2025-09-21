@@ -182,7 +182,7 @@ function App() {
   };
 
   // Handle public portfolio route
-  if (currentPage === 'portfolio-public') {
+  if (currentPage === 'portfolio-public' || window.location.pathname.startsWith('/portfolio/')) {
     const slug = window.location.pathname.split('/portfolio/')[1];
     return <PublicPortfolio slug={slug} />;
   }

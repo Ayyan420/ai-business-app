@@ -690,4 +690,3 @@ export default function PublicPortfolio({ slug }: { slug: string }) {
       `}</style>
     </div>
   );
-}

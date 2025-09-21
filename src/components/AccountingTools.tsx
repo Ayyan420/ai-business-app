@@ -109,8 +109,8 @@ const AccountingTools: React.FC = () => {
   };
 
   const addIncome = () => {
-    if (!incomeForm.description || !incomeForm.amount) {
-      alert('Please fill in description and amount');
+    if (!incomeForm.description || !incomeForm.amount || !incomeForm.date) {
+      alert('Please fill in description, amount, and date');
       return;
     }
 
@@ -368,6 +368,7 @@ Please provide:
               value={incomeForm.date}
               onChange={(e) => setIncomeForm(prev => ({ ...prev, date: e.target.value }))}
               className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              max={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
