@@ -93,30 +93,40 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ user }) => {
       delete (window as any).addNotification;
     };
   }, []);
+
+  useEffect(() => {
+    // Add welcome notification for new users
+    if (user && !localStorage.getItem('welcomeNotificationShown')) {
+      setTimeout(() => {
+        if ((window as any).addNotification) {
+          (window as any).addNotification({
+            type: 'success',
+            title: 'Welcome to AI Business Assistant!',
+            message: 'Your account is ready. Start exploring our powerful AI tools.',
+            read: false
+          });
+        }
+        localStorage.setItem('welcomeNotificationShown', 'true');
+      }, 1000);
+    }
+  }, [user]);
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAsRead = (id: string) => {
-    setNotifications(prev => {
-      const updated = prev.map(n => n.id === id ? { ...n, read: true } : n);
-      localStorage.setItem('userNotifications', JSON.stringify(updated));
-      return updated;
-    });
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
+    );
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => {
-      const updated = prev.map(n => ({ ...n, read: true }));
-      localStorage.setItem('userNotifications', JSON.stringify(updated));
-      return updated;
-    });
+    setNotifications(prev => 
+      prev.map(n => ({ ...n, read: true }))
+    );
   };
 
   const removeNotification = (id: string) => {
-    setNotifications(prev => {
-      const updated = prev.filter(n => n.id !== id);
-      localStorage.setItem('userNotifications', JSON.stringify(updated));
-      return updated;
-    });
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const getNotificationIcon = (type: string) => {

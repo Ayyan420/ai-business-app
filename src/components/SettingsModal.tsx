@@ -258,12 +258,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user }) 
                 onClick={() => {
                   if ((window as any).addNotification) {
                     (window as any).addNotification({
-                      type: 'success',
+                      type: 'info',
                       title: 'Test Notification',
-                      message: 'This is a test notification to verify the system is working!',
+                      message: `Hello ${user?.name || 'User'}! This is a test notification to verify the system is working properly.`,
                       read: false
                     });
-                    alert('Test notification sent! Check the notification bell icon.');
+                    setTimeout(() => {
+                      alert('Test notification sent! Check the notification bell icon in the sidebar.');
+                    }, 100);
                   }
                 }}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
