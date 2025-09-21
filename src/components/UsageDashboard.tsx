@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TierManager, TIERS } from '../lib/tiers';
 import { Crown, Zap, BarChart3 } from 'lucide-react';
 import TierUpgradeModal from './TierUpgradeModal';
