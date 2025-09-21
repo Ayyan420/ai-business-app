@@ -48,14 +48,23 @@ const Sidebar: React.FC<SidebarProps> = ({
   setSidebarOpen
 }) => {
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const currentTier = TierManager.getCurrentTier();
-  const tierInfo = TIERS[currentTier];
-  const usage = TierManager.getUsage();
+  const [currentTier, setCurrentTier] = React.useState('free');
+  const [tierInfo, setTierInfo] = React.useState(TIERS.free);
+  const [usage, setUsage] = React.useState({ contentGenerations: 0, invoices: 0, aiQueries: 0 });
   
   useEffect(() => {
     const loadTier = async () => {
-      const tier = await TierManager.getCurrentTier();
-      setCurrentTier(tier);
+      try {
+        const tier = await TierManager.getCurrentTier();
+        const info = TIERS[tier];
+        const currentUsage = TierManager.getUsage();
+        setCurrentTier(tier);
+        setTierInfo(info);
+        setUsage(currentUsage);
+      } catch (error) {
+        console.error('Error loading tier:', error);
+        // Keep default values
+      }
     };
     loadTier();
   }, [user]);
@@ -150,8 +159,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{user.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-gray-400 truncate">{user.email}</p>
+                  <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{user?.name || 'User'}</p>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 truncate">{user?.email || 'user@example.com'}</p>
                 </div>
               </div>
             </div>
