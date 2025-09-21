@@ -111,6 +111,12 @@ export const database = {
       const demoUser = JSON.parse(localStorage.getItem('demoUser') || '{}')
       const updatedUser = { ...demoUser, ...updates, updated_at: new Date().toISOString() }
       localStorage.setItem('demoUser', JSON.stringify(updatedUser))
+      
+      // Also update tier in localStorage if tier is being updated
+      if (updates.tier) {
+        localStorage.setItem('userTier', updates.tier);
+      }
+      
       return { data: updatedUser, error: null }
     }
     
@@ -215,6 +221,73 @@ export const database = {
     }
   },
 
+  async updateInvoice(id: string, updates: any) {
+    if (isDemoMode) {
+      const index = demoData.invoices.findIndex(invoice => invoice.id === id)
+      if (index !== -1) {
+        demoData.invoices[index] = { 
+          ...demoData.invoices[index], 
+          ...updates, 
+          updated_at: new Date().toISOString() 
+        }
+        return { data: demoData.invoices[index], error: null }
+      }
+      return { data: null, error: 'Invoice not found' }
+    }
+    
+    try {
+      console.log('🔄 Updating invoice:', { id, updates })
+      const { data, error } = await supabase
+        .from('invoices')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('❌ Update invoice error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Invoice updated successfully:', data)
+      return { data, error: null }
+    } catch (error) {
+      console.error('❌ Update invoice error:', error)
+      return { data: null, error }
+    }
+  },
+
+  async deleteInvoice(id: string) {
+    if (isDemoMode) {
+      const index = demoData.invoices.findIndex(invoice => invoice.id === id)
+      if (index !== -1) {
+        demoData.invoices.splice(index, 1)
+        return { data: { id }, error: null }
+      }
+      return { data: null, error: 'Invoice not found' }
+    }
+    
+    try {
+      console.log('🗑️ Deleting invoice:', id)
+      const { data, error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('❌ Delete invoice error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Invoice deleted successfully:', data)
+      return { data, error: null }
+    } catch (error) {
+      console.error('❌ Delete invoice error:', error)
+      return { data: null, error }
+    }
+  },
   // Campaigns
   async getCampaigns(userId?: string) {
     if (isDemoMode) {
@@ -484,7 +557,7 @@ export const database = {
       
       if (!portfolio && slug) {
         // Only create demo portfolio for demo-specific slugs
-        if (slug.includes('demo') || slug.includes('sample')) {
+        if (slug.includes('demo') || slug.includes('sample') || slug.includes('test')) {
         portfolio = {
           id: 'demo-portfolio',
           user_id: 'demo-user',

@@ -42,34 +42,24 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ user }) => {
   }, [user]);
 
   const loadNotifications = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      // In a real app, this would fetch from database
-      // For now, we'll create dynamic notifications based on user activity
-      const mockNotifications: Notification[] = [
-        {
-          id: '1',
-          type: 'success',
-          title: 'Welcome to AI Business Assistant!',
-          message: 'Your account has been set up successfully. Start exploring our AI-powered tools.',
-          timestamp: new Date(Date.now() - 5 * 60 * 1000),
-          read: false
-        },
-        {
-          id: '2',
-          type: 'info',
-          title: 'Portfolio Builder Available',
-          message: 'Create your professional portfolio to showcase your work.',
-          timestamp: new Date(Date.now() - 30 * 60 * 1000),
-          read: false
-        }
-      ];
-
-      setNotifications(mockNotifications);
+      // Load notifications from localStorage
+      const savedNotifications = localStorage.getItem('notifications');
+      if (savedNotifications) {
+        const allNotifications = JSON.parse(savedNotifications);
+        // Filter notifications for current user
+        const userNotifications = user 
+          ? allNotifications.filter((n: any) => n.userId === user.id || !n.userId)
+          : allNotifications.filter((n: any) => !n.userId);
+        
+        // Convert timestamp strings back to Date objects
+        const notifications = userNotifications.map((n: any) => ({
+          ...n,
+          timestamp: new Date(n.timestamp)
+        }));
+        
+        setNotifications(notifications);
+      }
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
@@ -93,6 +83,24 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ user }) => {
       delete (window as any).addNotification;
     };
   }, []);
+
+  useEffect(() => {
+    // Add welcome notification for new users
+    if (user && !localStorage.getItem('welcomeNotificationShown')) {
+      setTimeout(() => {
+        if ((window as any).addNotification) {
+          (window as any).addNotification({
+            type: 'success',
+            title: 'Welcome to AI Business Assistant!',
+            message: 'Your account is ready. Start exploring our powerful AI tools.',
+            read: false
+          });
+        }
+        localStorage.setItem('welcomeNotificationShown', 'true');
+      }, 1000);
+    }
+  }, [user]);
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAsRead = (id: string) => {
@@ -109,6 +117,11 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({ user }) => {
 
   const removeNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    
+    // Remove from localStorage
+    const allNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+    const updatedNotifications = allNotifications.filter((n: any) => n.id !== id);
+    localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
   };
 
   const getNotificationIcon = (type: string) => {

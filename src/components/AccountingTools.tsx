@@ -109,8 +109,8 @@ const AccountingTools: React.FC = () => {
   };
 
   const addIncome = () => {
-    if (!incomeForm.description || !incomeForm.amount) {
-      alert('Please fill in description and amount');
+    if (!incomeForm.description || !incomeForm.amount || !incomeForm.date) {
+      alert('Please fill in description, amount, and date');
       return;
     }
 

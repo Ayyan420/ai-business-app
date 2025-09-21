@@ -119,11 +119,14 @@ const PortfolioBuilder: React.FC<PortfolioBuilderProps> = ({ user }) => {
   };
 
   const generateSlug = (name: string) => {
-    return name
+    const baseSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
-      .substring(0, 30) + '-' + Date.now().toString(36);
+      .substring(0, 20);
+    
+    // Add user ID to make it unique
+    return `${baseSlug}-${user?.id?.substring(0, 8) || Date.now().toString(36)}`;
   };
 
   const handleSave = async () => {

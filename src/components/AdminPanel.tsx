@@ -104,8 +104,21 @@ const AdminPanel: React.FC = () => {
       // Update payment status
       await database.updatePaymentStatus(paymentId, 'completed');
       
-      // Update user tier
-      await dbFunctions.updateUserTier(userId, tier);
+      // Update user tier in database
+      await database.updateUserProfile(userId, { tier });
+      
+      // Add notification to localStorage for the specific user
+      const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+      notifications.unshift({
+        id: Date.now().toString(),
+        type: 'success',
+        title: 'Payment Approved!',
+        message: `Your payment has been approved and your plan has been upgraded to ${tier}.`,
+        timestamp: new Date().toISOString(),
+        read: false,
+        userId: userId
+      });
+      localStorage.setItem('notifications', JSON.stringify(notifications));
       
       // Refresh data
       loadAdminData();
@@ -121,6 +134,24 @@ const AdminPanel: React.FC = () => {
     try {
       console.log('❌ Rejecting payment:', paymentId);
       await database.updatePaymentStatus(paymentId, 'failed');
+      
+      // Get payment details to find user ID
+      const payment = payments.find(p => p.id === paymentId);
+      if (payment) {
+        // Add notification to localStorage for the specific user
+        const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+        notifications.unshift({
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'Payment Rejected',
+          message: 'Your payment has been rejected. Please contact support for assistance.',
+          timestamp: new Date().toISOString(),
+          read: false,
+          userId: payment.user_id
+        });
+        localStorage.setItem('notifications', JSON.stringify(notifications));
+      }
+      
       loadAdminData();
       alert('Payment rejected successfully!');
     } catch (error) {

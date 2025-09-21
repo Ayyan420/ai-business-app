@@ -79,12 +79,39 @@ export const TIERS: Record<string, UserTier> = {
 export class TierManager {
   private static STORAGE_KEY = 'userTierUsage';
 
-  static getCurrentTier(): string {
+  // Async: check DB, fallback to localStorage
+  static async getCurrentTier(): Promise<string> {
+    try {
+      const { data: profile } = await import('./database')
+        .then(db => db.database.getCurrentUser());
+
+      if (profile?.tier) {
+        localStorage.setItem('userTier', profile.tier);
+        return profile.tier;
+      }
+    } catch (error) {
+      console.log('Database not available, using localStorage');
+    }
     return localStorage.getItem('userTier') || 'free';
   }
 
-  static setTier(tier: string) {
+  // ✅ Sync version for immediate usage
+  static getCachedTier(): string {
+    return localStorage.getItem('userTier') || 'free';
+  }
+
+  static async setTier(tier: string) {
     localStorage.setItem('userTier', tier);
+    try {
+      const { auth } = await import('./supabase');
+      const { data: { user } } = await auth.getUser();
+      if (user) {
+        const { database } = await import('./database');
+        await database.updateUserProfile(user.id, { tier });
+      }
+    } catch (error) {
+      console.log('Database update failed, tier saved locally');
+    }
     console.log('🎯 Tier updated to:', tier);
   }
 
@@ -108,30 +135,26 @@ export class TierManager {
   }
 
   static canUseFeature(type: keyof TierLimits): boolean {
-    const currentTier = this.getCurrentTier();
+    const currentTier = this.getCachedTier(); // ✅ fixed
     const tierLimits = TIERS[currentTier].limits;
     const usage = this.getUsage();
 
-    // -1 means unlimited
     if (tierLimits[type] === -1) return true;
-    
     const canUse = (usage[type] || 0) < tierLimits[type];
     console.log(`🔒 Feature check: ${type} - ${canUse ? 'ALLOWED' : 'BLOCKED'} (${usage[type] || 0}/${tierLimits[type]})`);
     return canUse;
   }
 
   static getRemainingUsage(type: keyof TierLimits): number {
-    const currentTier = this.getCurrentTier();
+    const currentTier = this.getCachedTier(); // ✅ fixed
     const tierLimits = TIERS[currentTier].limits;
     const usage = this.getUsage();
 
-    if (tierLimits[type] === -1) return -1; // Unlimited
-    
+    if (tierLimits[type] === -1) return -1;
     return Math.max(0, tierLimits[type] - (usage[type] || 0));
   }
 
   static resetMonthlyUsage() {
-    // This would typically be called by a cron job or when a new month starts
     localStorage.removeItem(this.STORAGE_KEY);
     console.log('🔄 Monthly usage reset');
   }
