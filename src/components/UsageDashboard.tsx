@@ -5,9 +5,17 @@ import TierUpgradeModal from './TierUpgradeModal';
 
 const UsageDashboard: React.FC = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const currentTier = TierManager.getCurrentTier();
+  const [currentTier, setCurrentTier] = useState('free');
   const tierInfo = TIERS[currentTier];
   const usage = TierManager.getUsage();
+  
+  useEffect(() => {
+    const loadTier = async () => {
+      const tier = await TierManager.getCurrentTier();
+      setCurrentTier(tier);
+    };
+    loadTier();
+  }, []);
 
   const getUsagePercentage = (used: number, limit: number) => {
     if (limit === -1) return 0; // Unlimited
