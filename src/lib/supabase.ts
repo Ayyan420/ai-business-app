@@ -248,25 +248,49 @@ export const auth = {
       console.log('📱 Demo mode: Password update simulated')
       return { data: { user: null }, error: null }
     }
-    
+
     try {
       console.log('🔐 Updating password...')
-      // First check if user is authenticated
       const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
+
       if (userError || !user) {
         console.error('❌ User not authenticated for password update')
         return { data: null, error: { message: 'Please log in again to update your password' } }
       }
-      
-      const result = await supabase.auth.updateUser({ 
-        password: newPassword 
+
+      const result = await supabase.auth.updateUser({
+        password: newPassword
       })
-      
+
       console.log('✅ Password update result:', { success: !result.error })
       return result
     } catch (error) {
       console.error('❌ Password update error:', error)
+      return { data: null, error: error as any }
+    }
+  },
+
+  async resetPassword(email: string) {
+    if (isDemoMode || !supabase) {
+      console.log('📱 Demo mode: Password reset simulated')
+      return { data: null, error: null }
+    }
+
+    try {
+      console.log('🔐 Sending password reset email to:', email)
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
+
+      if (error) {
+        console.error('❌ Password reset error:', error)
+        return { data: null, error }
+      }
+
+      console.log('✅ Password reset email sent successfully')
+      return { data, error: null }
+    } catch (error) {
+      console.error('❌ Password reset error:', error)
       return { data: null, error: error as any }
     }
   }

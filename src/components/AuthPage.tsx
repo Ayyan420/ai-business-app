@@ -114,9 +114,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onBack }) => {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
-      
+
       if (isDemoMode) {
-        // Demo Google sign in
         const googleUser = {
           id: 'google-demo-user',
           name: 'Google Demo User',
@@ -128,16 +127,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onBack }) => {
       }
 
       const { data, error } = await auth.signInWithGoogle();
-      
+
       if (error) {
         setErrors({ general: error.message || 'Google sign in failed' });
         setIsLoading(false);
         return;
       }
 
-      // Google OAuth doesn't require email confirmation
-      // The user will be redirected and handled by the OAuth callback
-      
     } catch (error) {
       console.error('Google sign in error:', error);
       setErrors({ general: 'Google sign in failed. Please try again.' });
@@ -145,6 +141,83 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onBack }) => {
       setIsLoading(false);
     }
   };
+
+  const handleForgotPassword = async () => {
+    if (!formData.email) {
+      setErrors({ email: 'Please enter your email address' });
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setErrors({ email: 'Please enter a valid email address' });
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const { error } = await auth.resetPassword(formData.email);
+
+      if (error) {
+        setErrors({ general: error.message });
+      } else {
+        setResetEmailSent(true);
+        setConfirmationEmail(formData.email);
+      }
+    } catch (error: any) {
+      setErrors({ general: 'Failed to send reset email. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (resetEmailSent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-gray-700 text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-8 h-8 text-blue-600" />
+            </div>
+
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">
+              Check Your Email
+            </h1>
+
+            <p className="text-slate-600 dark:text-gray-400 mb-6">
+              We've sent a password reset link to <strong>{confirmationEmail}</strong>.
+              Click the link in the email to reset your password.
+            </p>
+
+            <div className="space-y-4">
+              <button
+                onClick={() => {
+                  setResetEmailSent(false);
+                  setShowForgotPassword(false);
+                  setIsLogin(true);
+                }}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Back to Sign In
+              </button>
+
+              <button
+                onClick={onBack}
+                className="w-full px-4 py-3 border border-slate-300 dark:border-gray-600 text-slate-700 dark:text-gray-300 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Back to Home
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-500 dark:text-gray-500 mt-6">
+              Didn't receive the email? Check your spam folder.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (showConfirmation) {
     return (
@@ -344,6 +417,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onBack }) => {
                 </button>
               </div>
               {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+              {isLogin && (
+                <div className="text-right mt-1">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                    disabled={isLoading}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
             </div>
 
             {!isLogin && (

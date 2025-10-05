@@ -18,7 +18,6 @@ interface InvoiceItem {
   rate: number;
   amount: number;
 }
-import ImageUpload from './ImageUpload';
 
 interface InvoiceGeneratorProps {
   onSave: (invoice: any) => void;
@@ -254,17 +253,20 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
             </label>
             <div className="flex items-center space-x-3">
               {companyInfo.logo && (
-                <img 
-                  src={companyInfo.logo} 
-                  alt="Company Logo" 
+                <img
+                  src={companyInfo.logo}
+                  alt="Company Logo"
                   className="w-16 h-16 object-contain border border-slate-200 dark:border-gray-600 rounded"
                 />
               )}
               <div className="flex-1">
-                <ImageUpload
-                  onImageUpload={(url) => setInvoiceData((prev: any) => ({ ...prev, invoice_logo: url }))}
-                  currentImage={invoiceData.invoice_logo}
-                  label="Invoice Logo"
+                <input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                  disabled={uploading}
                 />
                 <label
                   htmlFor="logo-upload"
@@ -278,7 +280,9 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
                   ) : (
                     <>
                       <Upload className="w-4 h-4 text-slate-600 dark:text-gray-300" />
-                      <span className="text-sm text-slate-600 dark:text-gray-300">Upload Logo</span>
+                      <span className="text-sm text-slate-600 dark:text-gray-300">
+                        {companyInfo.logo ? 'Change Logo' : 'Upload Logo'}
+                      </span>
                     </>
                   )}
                 </label>
