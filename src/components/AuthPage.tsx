@@ -20,6 +20,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState('');
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
