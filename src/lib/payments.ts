@@ -1,4 +1,6 @@
-// Payment processing integration for Pakistani market
+import { supabase, isDemoMode } from './supabase';
+import { TierManager } from './tiers';
+
 export interface PaymentMethod {
   id: string;
   name: string;
@@ -13,7 +15,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
     name: 'JazzCash',
     type: 'mobile',
     available: true,
-    fees: 0.02 // 2%
+    fees: 0.02
   },
   {
     id: 'easypaisa',
@@ -46,37 +48,33 @@ export class PaymentProcessor {
     userDetails: any,
     tierName: string
   ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
-    console.log('💳 Processing payment:', { amount, currency, method, tierName })
-    
+    console.log('Processing payment:', { amount, currency, method, tierName });
+
     try {
-      // Validate input parameters
       if (!amount || amount <= 0) {
-        throw new Error('Invalid payment amount')
+        throw new Error('Invalid payment amount');
       }
-      
+
       if (!userDetails || !userDetails.id) {
-        throw new Error('User information is required')
+        throw new Error('User information is required');
       }
-      
+
       if (!tierName || !['starter', 'professional'].includes(tierName)) {
-        throw new Error('Invalid subscription tier')
+        throw new Error('Invalid subscription tier');
       }
-      
-      // Simulate payment processing with better error handling
+
       await new Promise((resolve, reject) => {
         setTimeout(() => {
-          // Simulate occasional failures for demo
           if (Math.random() > 0.9) {
-            reject(new Error('Payment gateway temporarily unavailable'))
+            reject(new Error('Payment gateway temporarily unavailable'));
           } else {
-            resolve(true)
+            resolve(true);
           }
-        }, 2000)
-      })
-      
+        }, 2000);
+      });
+
       const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Store payment record
+
       const paymentRecord = {
         user_id: userDetails.id,
         amount,
@@ -85,30 +83,36 @@ export class PaymentProcessor {
         payment_method: method,
         transaction_id: transactionId,
         tier: tierName,
+        billing_period_start: new Date().toISOString(),
+        billing_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         created_at: new Date().toISOString()
       };
-      
-      // Save to database and update user tier
-      localStorage.setItem('lastPayment', JSON.stringify(paymentRecord));
-      
-      // Update user tier immediately after successful payment
-      import('./tiers').then(({ TierManager }) => {
-        TierManager.setTier(tierName);
-        console.log('✅ User tier updated to:', tierName);
-      });
-      
-      // Update localStorage user data
-      const userData = JSON.parse(localStorage.getItem('aiBusinessUser') || '{}');
-      userData.tier = tierName;
-      localStorage.setItem('aiBusinessUser', JSON.stringify(userData));
-      
-      console.log('✅ Payment processed successfully:', transactionId)
+
+      if (isDemoMode || !supabase) {
+        localStorage.setItem('lastPayment', JSON.stringify(paymentRecord));
+        const demoUser = JSON.parse(localStorage.getItem('demoUser') || '{}');
+        demoUser.tier = tierName;
+        localStorage.setItem('demoUser', JSON.stringify(demoUser));
+      } else {
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .insert(paymentRecord);
+
+        if (paymentError) {
+          console.error('Failed to save payment record:', paymentError);
+          throw new Error('Failed to save payment record');
+        }
+
+        await TierManager.setTier(tierName);
+      }
+
+      console.log('Payment processed successfully:', transactionId);
       return {
         success: true,
         transactionId
       };
     } catch (error) {
-      console.error('❌ Payment processing failed:', error)
+      console.error('Payment processing failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Payment processing failed. Please try again.'
@@ -116,16 +120,36 @@ export class PaymentProcessor {
     }
   }
 
+  static async getPaymentHistory(userId: string) {
+    if (isDemoMode || !supabase) {
+      const lastPayment = localStorage.getItem('lastPayment');
+      return lastPayment ? [JSON.parse(lastPayment)] : [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching payment history:', error);
+      return [];
+    }
+  }
+
   static async initializeJazzCash(amount: number, orderId: string) {
-    // JazzCash integration would go here
     return {
       paymentUrl: `https://sandbox.jazzcash.com.pk/CustomerPortal/transactionmanagement/merchantform/?${new URLSearchParams({
         pp_Amount: (amount * 100).toString(),
         pp_BillReference: orderId,
         pp_Description: 'AI Business Assistant Subscription',
         pp_Language: 'EN',
-        pp_MerchantID: 'MC12345', // Your merchant ID
-        pp_Password: 'password', // Your password
+        pp_MerchantID: 'MC12345',
+        pp_Password: 'password',
         pp_ReturnURL: `${window.location.origin}/payment/success`,
         pp_ver: '1.1',
         pp_TxnCurrency: 'PKR',
@@ -138,7 +162,6 @@ export class PaymentProcessor {
   }
 
   static async initializeEasyPaisa(amount: number, orderId: string) {
-    // EasyPaisa integration would go here
     return {
       paymentUrl: `https://easypaisa.com.pk/easypay/Index.jsf?${new URLSearchParams({
         amount: amount.toString(),
@@ -156,15 +179,7 @@ export class PaymentProcessor {
   }
 }
 
-// Webhook handler for payment confirmations
 export const handlePaymentWebhook = async (payload: any) => {
-  // Verify webhook signature
-  // Update payment status in database
-  // Update user tier
-  // Send confirmation email
-  
   console.log('Payment webhook received:', payload);
-  
-  // In production, this would be a secure endpoint
   return { success: true };
 };

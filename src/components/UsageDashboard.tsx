@@ -6,19 +6,41 @@ import TierUpgradeModal from './TierUpgradeModal';
 const UsageDashboard: React.FC = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [currentTier, setCurrentTier] = useState('free');
+  const [usage, setUsage] = useState<Record<string, number>>({});
+  const [subscription, setSubscription] = useState<any>(null);
+  const [daysUntilRenewal, setDaysUntilRenewal] = useState(0);
+  const [isActive, setIsActive] = useState(true);
+  const [loading, setLoading] = useState(true);
+
   const tierInfo = TIERS[currentTier];
-  const usage = TierManager.getUsage();
-  
+
   useEffect(() => {
-    const loadTier = async () => {
-      const tier = await TierManager.getCurrentTier();
-      setCurrentTier(tier);
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [tier, usageData, subData, days, active] = await Promise.all([
+          TierManager.getCurrentTier(),
+          TierManager.getUsage(),
+          TierManager.getSubscription(),
+          TierManager.getDaysUntilRenewal(),
+          TierManager.isSubscriptionActive()
+        ]);
+        setCurrentTier(tier);
+        setUsage(usageData);
+        setSubscription(subData);
+        setDaysUntilRenewal(days);
+        setIsActive(active);
+      } catch (error) {
+        console.error('Error loading usage data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-    loadTier();
+    loadData();
   }, []);
 
   const getUsagePercentage = (used: number, limit: number) => {
-    if (limit === -1) return 0; // Unlimited
+    if (limit === -1) return 0;
     return Math.min((used / limit) * 100, 100);
   };
 
@@ -38,9 +60,15 @@ const UsageDashboard: React.FC = () => {
     { key: 'storage', label: 'Storage (MB)', icon: BarChart3 }
   ];
 
-  const subscription = TierManager.getSubscription();
-  const daysUntilRenewal = TierManager.getDaysUntilRenewal();
-  const isActive = TierManager.isSubscriptionActive();
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-gray-700">
+        <div className="flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-gray-700">
