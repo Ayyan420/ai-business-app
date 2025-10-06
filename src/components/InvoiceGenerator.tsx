@@ -76,6 +76,11 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       alert('File size must be less than 5MB');
       return;
@@ -84,18 +89,20 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
     setUploading(true);
 
     try {
-      const { data, error } = await database.uploadFile(file, 'invoice_logo');
-      
-      if (!error && data) {
-        setCompanyInfo(prev => ({ ...prev, logo: data.file_url }));
-        alert('Logo uploaded successfully!');
-      } else {
-        alert('Error uploading logo. Please try again.');
-      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setCompanyInfo(prev => ({ ...prev, logo: dataUrl }));
+        setUploading(false);
+      };
+      reader.onerror = () => {
+        alert('Error reading file. Please try again.');
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error('Logo upload error:', error);
       alert('Error uploading logo. Please try again.');
-    } finally {
       setUploading(false);
     }
   };
