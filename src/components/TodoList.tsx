@@ -511,6 +511,7 @@ const TodoList: React.FC = () => {
                   type="date"
                   value={newTodo.due_date}
                   onChange={(e) => setNewTodo({ ...newTodo, due_date: e.target.value })}
+                  required
                   className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                   min={new Date().toISOString().split('T')[0]}
                 />
@@ -609,6 +610,7 @@ const TodoList: React.FC = () => {
                   type="date"
                   value={editingTodo.due_date || ''}
                   onChange={(e) => setEditingTodo({ ...editingTodo, due_date: e.target.value })}
+                  required
                   className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>

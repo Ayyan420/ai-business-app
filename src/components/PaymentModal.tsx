@@ -276,6 +276,7 @@ Amount: $${tier.price.toFixed(2)}`;
                     type="date"
                     value={paymentData.transferDate}
                     onChange={(e) => setPaymentData(prev => ({ ...prev, transferDate: e.target.value }))}
+                    required
                     className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                   />
                 </div>

@@ -360,6 +360,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
               type="date"
               value={invoiceData.due_date}
               onChange={(e) => setInvoiceData(prev => ({ ...prev, due_date: e.target.value }))}
+              required
               className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
