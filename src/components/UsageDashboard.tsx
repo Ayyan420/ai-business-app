@@ -18,6 +18,8 @@ const UsageDashboard: React.FC = () => {
     const loadData = async () => {
       setLoading(true);
       try {
+        await TierManager.checkAndResetUsage();
+
         const [tier, usageData, subData, days, active] = await Promise.all([
           TierManager.getCurrentTier(),
           TierManager.getUsage(),
@@ -37,6 +39,9 @@ const UsageDashboard: React.FC = () => {
       }
     };
     loadData();
+
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const getUsagePercentage = (used: number, limit: number) => {

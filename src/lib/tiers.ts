@@ -328,6 +328,61 @@ export class TierManager {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
+  static async checkAndResetUsage(): Promise<void> {
+    if (isDemoMode || !supabase) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const subscription = await this.getSubscription();
+      const now = new Date();
+      const endDate = new Date(subscription.current_period_end);
+
+      if (now > endDate && subscription.tier !== 'free') {
+        await supabase
+          .from('subscriptions')
+          .update({
+            status: 'expired',
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id);
+
+        await supabase
+          .from('users')
+          .update({
+            tier: 'free',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+
+        console.log('Subscription expired, user downgraded to free tier');
+      }
+
+      const currentMonth = now.toISOString().substring(0, 7);
+      const { data: usageRecords } = await supabase
+        .from('usage_tracking')
+        .select('month')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      if (usageRecords && usageRecords.length > 0) {
+        const latestMonth = usageRecords[0].month;
+        if (latestMonth !== currentMonth) {
+          await supabase
+            .from('usage_tracking')
+            .delete()
+            .eq('user_id', user.id)
+            .neq('month', currentMonth);
+
+          console.log('Monthly usage reset completed');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking/resetting usage:', error);
+    }
+  }
+
   private static getEmptyUsage(): Record<string, number> {
     return {
       contentGenerations: 0,

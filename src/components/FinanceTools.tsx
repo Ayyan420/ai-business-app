@@ -15,6 +15,7 @@ import {
 import { database } from '../lib/database';
 import InvoiceGenerator from './InvoiceGenerator';
 import { CurrencyManager } from '../lib/currency';
+import { TierManager } from '../lib/tiers';
 
 const FinanceTools: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState('invoice');
@@ -223,6 +224,7 @@ const FinanceTools: React.FC = () => {
     console.log('📊 Invoice save result:', { data, error });
     if (!error && data) {
       setSavedInvoices(prev => [data, ...prev]);
+      await TierManager.updateUsage('invoices');
       console.log('✅ Invoice saved successfully');
       alert('Invoice saved successfully!');
       if(error){
