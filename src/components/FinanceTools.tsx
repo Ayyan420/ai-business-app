@@ -15,6 +15,7 @@ import {
 import { database } from '../lib/database';
 import InvoiceGenerator from './InvoiceGenerator';
 import { CurrencyManager } from '../lib/currency';
+import { TierManager } from '../lib/tiers';
 
 const FinanceTools: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState('invoice');
@@ -59,6 +60,134 @@ const FinanceTools: React.FC = () => {
     }
   };
 
+  const generateInvoicePDF = (invoice: any, downloadPDF: boolean) => {
+    const invoiceWindow = window.open('', '_blank');
+    if (!invoiceWindow) return;
+
+    const companyInfo = invoice.company_info || {
+      name: 'Your Company',
+      address: '',
+      email: '',
+      phone: '',
+      logo: ''
+    };
+
+    const logoHtml = companyInfo.logo ?
+      `<img src="${companyInfo.logo}" alt="Company Logo" style="max-height: 80px; max-width: 200px; object-fit: contain;">` :
+      `<div style="font-size: 24px; font-weight: bold; color: #3B82F6;">${companyInfo.name}</div>`;
+
+    const items = invoice.items || [];
+    const subtotal = items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+    const taxAmount = invoice.tax_amount || 0;
+    const total = invoice.amount || (subtotal + taxAmount);
+
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Invoice ${invoice.invoice_number}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #3B82F6; padding-bottom: 20px; }
+            .company-info { flex: 1; }
+            .invoice-info { text-align: right; }
+            .invoice-title { font-size: 32px; font-weight: bold; color: #3B82F6; margin: 0; }
+            .client-info { background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            .items-table th, .items-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+            .items-table th { background: #f1f5f9; font-weight: bold; }
+            .totals { text-align: right; margin-bottom: 30px; }
+            .totals div { margin: 8px 0; }
+            .total-amount { font-size: 20px; font-weight: bold; color: #3B82F6; }
+            .footer { border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 40px; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-info">
+              ${logoHtml}
+              ${companyInfo.address ? `<div style="margin-top: 10px; white-space: pre-line;">${companyInfo.address}</div>` : ''}
+              ${companyInfo.email ? `<div>${companyInfo.email}</div>` : ''}
+              ${companyInfo.phone ? `<div>${companyInfo.phone}</div>` : ''}
+            </div>
+            <div class="invoice-info">
+              <h1 class="invoice-title">INVOICE</h1>
+              <div><strong>Invoice #:</strong> ${invoice.invoice_number}</div>
+              <div><strong>Date:</strong> ${new Date(invoice.created_at).toLocaleDateString()}</div>
+              <div><strong>Due Date:</strong> ${invoice.due_date}</div>
+            </div>
+          </div>
+
+          <div class="client-info">
+            <h3 style="margin: 0 0 10px 0; color: #3B82F6;">Bill To:</h3>
+            <div><strong>${invoice.client_name}</strong></div>
+            <div>${invoice.client_email}</div>
+            ${invoice.client_address ? `<div style="white-space: pre-line;">${invoice.client_address}</div>` : ''}
+          </div>
+
+          ${items.length > 0 ? `
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th style="text-align: center;">Quantity</th>
+                  <th style="text-align: right;">Rate</th>
+                  <th style="text-align: right;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map((item: any) => `
+                  <tr>
+                    <td>${item.description || ''}</td>
+                    <td style="text-align: center;">${item.quantity || 0}</td>
+                    <td style="text-align: right;">${CurrencyManager.formatAmount(item.rate || 0)}</td>
+                    <td style="text-align: right;">${CurrencyManager.formatAmount(item.amount || 0)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <div class="totals">
+              <div><strong>Subtotal: ${CurrencyManager.formatAmount(subtotal)}</strong></div>
+              ${taxAmount > 0 ? `<div>Tax: ${CurrencyManager.formatAmount(taxAmount)}</div>` : ''}
+              <div class="total-amount">Total: ${CurrencyManager.formatAmount(total)}</div>
+            </div>
+          ` : `
+            <div class="totals">
+              <div class="total-amount">Total: ${CurrencyManager.formatAmount(total)}</div>
+            </div>
+          `}
+
+          ${invoice.notes ? `
+            <div class="footer">
+              <h4>Notes:</h4>
+              <p style="white-space: pre-line;">${invoice.notes}</p>
+            </div>
+          ` : ''}
+
+          ${invoice.terms ? `
+            <div class="footer">
+              <h4>Terms & Conditions:</h4>
+              <p style="white-space: pre-line;">${invoice.terms}</p>
+            </div>
+          ` : ''}
+
+          ${downloadPDF ? `
+            <script>
+              window.onload = function() {
+                window.print();
+              }
+            </script>
+          ` : ''}
+        </body>
+      </html>
+    `;
+
+    invoiceWindow.document.write(invoiceHTML);
+    invoiceWindow.document.close();
+  };
+
   const generateForecast = async () => {
     if (!forecastForm.currentRevenue || !forecastForm.growthRate || !forecastForm.period) {
       alert('Please fill in all required fields');
@@ -95,6 +224,7 @@ const FinanceTools: React.FC = () => {
     console.log('📊 Invoice save result:', { data, error });
     if (!error && data) {
       setSavedInvoices(prev => [data, ...prev]);
+      await TierManager.updateUsage('invoices');
       console.log('✅ Invoice saved successfully');
       alert('Invoice saved successfully!');
       if(error){
@@ -422,30 +552,19 @@ const FinanceTools: React.FC = () => {
                     <td className="py-3 px-4 text-slate-600">{invoice.due_date}</td>
                     <td className="py-3 px-4">
                       <div className="flex space-x-2">
-                        <button 
-                          onClick={() => {
-                            const invoiceWindow = window.open('', '_blank');
-                            if (invoiceWindow) {
-                              invoiceWindow.document.write(`
-                                <html>
-                                  <head><title>Invoice ${invoice.invoice_number}</title></head>
-                                  <body style="font-family: Arial, sans-serif; padding: 20px;">
-                                    <h1>Invoice ${invoice.invoice_number}</h1>
-                                    <p><strong>Client:</strong> ${invoice.client_name}</p>
-                                    <p><strong>Email:</strong> ${invoice.client_email}</p>
-                                    <p><strong>Amount:</strong> $${invoice.amount?.toLocaleString()}</p>
-                                    <p><strong>Status:</strong> ${invoice.status}</p>
-                                    <p><strong>Created:</strong> ${new Date(invoice.created_at).toLocaleDateString()}</p>
-                                    <p><strong>Due Date:</strong> ${invoice.due_date}</p>
-                                  </body>
-                                </html>
-                              `);
-                              invoiceWindow.document.close();
-                            }
-                          }}
+                        <button
+                          onClick={() => generateInvoicePDF(invoice, false)}
                           className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Preview Invoice"
                         >
                           <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => generateInvoicePDF(invoice, true)}
+                          className="p-1 text-green-600 hover:bg-green-50 rounded"
+                          title="Download PDF"
+                        >
+                          <Download className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => {

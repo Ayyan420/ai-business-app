@@ -28,21 +28,25 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, selectedTi
 
   const tier = TIERS[selectedTier];
   const bankDetails = {
-    bankName: 'Meezan Bank Limited',
-    accountTitle: 'AI Business Solutions',
-    accountNumber: '01234567890123',
-    iban: 'PK36MEZN0001234567890123',
-    branchCode: '0123',
-    swiftCode: 'MEZNPKKA'
+    bankName: 'Community Federal Savings Bank',
+    bankAddress: '89-16 Jamaica Ave, Woodhaven, NY, 11421, United States',
+    accountTitle: 'Ayyan Saddiqui',
+    accountNumber: '8312616094',
+    accountType: 'Checking',
+    routingNumber: '026073150',
+    swiftCode: 'CMFGUS33'
   };
 
   const copyBankDetails = () => {
     const details = `Bank: ${bankDetails.bankName}
-Account Title: ${bankDetails.accountTitle}
+Bank Address: ${bankDetails.bankAddress}
+Account Name: ${bankDetails.accountTitle}
 Account Number: ${bankDetails.accountNumber}
-IBAN: ${bankDetails.iban}
+Account Type: ${bankDetails.accountType}
+Routing Number (ACH/Wire): ${bankDetails.routingNumber}
+Swift/BIC: ${bankDetails.swiftCode}
 Amount: $${tier.price.toFixed(2)}`;
-    
+
     navigator.clipboard.writeText(details);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -182,31 +186,46 @@ Amount: $${tier.price.toFixed(2)}`;
                 </button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
+              <div className="space-y-3 text-sm">
+                <div className="col-span-2">
                   <p className="text-slate-600 dark:text-gray-400">Bank Name:</p>
                   <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.bankName}</p>
                 </div>
-                <div>
-                  <p className="text-slate-600 dark:text-gray-400">Account Title:</p>
-                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountTitle}</p>
+                <div className="col-span-2">
+                  <p className="text-slate-600 dark:text-gray-400">Bank Address:</p>
+                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.bankAddress}</p>
                 </div>
-                <div>
-                  <p className="text-slate-600 dark:text-gray-400">Account Number:</p>
-                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountNumber}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">Account Name:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountTitle}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">Account Number:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">Account Type:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.accountType}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">Routing Number (ACH/Wire):</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.routingNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-gray-400">Swift/BIC:</p>
+                    <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.swiftCode}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-slate-600 dark:text-gray-400">IBAN:</p>
-                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.iban}</p>
-                </div>
-                <div>
-                  <p className="text-slate-600 dark:text-gray-400">Branch Code:</p>
-                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.branchCode}</p>
-                </div>
-                <div>
-                  <p className="text-slate-600 dark:text-gray-400">SWIFT Code:</p>
-                  <p className="font-semibold text-slate-800 dark:text-white">{bankDetails.swiftCode}</p>
-                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                <p className="text-blue-800 dark:text-blue-300 text-sm">
+                  <strong>For US transfers:</strong> Use Routing Number {bankDetails.routingNumber}
+                </p>
+                <p className="text-blue-800 dark:text-blue-300 text-sm mt-1">
+                  <strong>For International transfers:</strong> Use Swift/BIC {bankDetails.swiftCode}
+                </p>
               </div>
               
               <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
@@ -276,6 +295,7 @@ Amount: $${tier.price.toFixed(2)}`;
                     type="date"
                     value={paymentData.transferDate}
                     onChange={(e) => setPaymentData(prev => ({ ...prev, transferDate: e.target.value }))}
+                    required
                     className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                   />
                 </div>

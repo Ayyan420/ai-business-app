@@ -18,7 +18,6 @@ interface InvoiceItem {
   rate: number;
   amount: number;
 }
-import ImageUpload from './ImageUpload';
 
 interface InvoiceGeneratorProps {
   onSave: (invoice: any) => void;
@@ -77,6 +76,11 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       alert('File size must be less than 5MB');
       return;
@@ -85,18 +89,20 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
     setUploading(true);
 
     try {
-      const { data, error } = await database.uploadFile(file, 'invoice_logo');
-      
-      if (!error && data) {
-        setCompanyInfo(prev => ({ ...prev, logo: data.file_url }));
-        alert('Logo uploaded successfully!');
-      } else {
-        alert('Error uploading logo. Please try again.');
-      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setCompanyInfo(prev => ({ ...prev, logo: dataUrl }));
+        setUploading(false);
+      };
+      reader.onerror = () => {
+        alert('Error reading file. Please try again.');
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error('Logo upload error:', error);
       alert('Error uploading logo. Please try again.');
-    } finally {
       setUploading(false);
     }
   };
@@ -254,17 +260,20 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
             </label>
             <div className="flex items-center space-x-3">
               {companyInfo.logo && (
-                <img 
-                  src={companyInfo.logo} 
-                  alt="Company Logo" 
+                <img
+                  src={companyInfo.logo}
+                  alt="Company Logo"
                   className="w-16 h-16 object-contain border border-slate-200 dark:border-gray-600 rounded"
                 />
               )}
               <div className="flex-1">
-                <ImageUpload
-                  onImageUpload={(url) => setInvoiceData((prev: any) => ({ ...prev, invoice_logo: url }))}
-                  currentImage={invoiceData.invoice_logo}
-                  label="Invoice Logo"
+                <input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                  disabled={uploading}
                 />
                 <label
                   htmlFor="logo-upload"
@@ -278,7 +287,9 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
                   ) : (
                     <>
                       <Upload className="w-4 h-4 text-slate-600 dark:text-gray-300" />
-                      <span className="text-sm text-slate-600 dark:text-gray-300">Upload Logo</span>
+                      <span className="text-sm text-slate-600 dark:text-gray-300">
+                        {companyInfo.logo ? 'Change Logo' : 'Upload Logo'}
+                      </span>
                     </>
                   )}
                 </label>
@@ -349,6 +360,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ onSave }) => {
               type="date"
               value={invoiceData.due_date}
               onChange={(e) => setInvoiceData(prev => ({ ...prev, due_date: e.target.value }))}
+              required
               className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
